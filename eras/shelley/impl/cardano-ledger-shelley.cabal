@@ -87,7 +87,6 @@ library
   build-depends:
     aeson,
     base16-bytestring >= 1,
-    base64-bytestring,
     bytestring,
     cardano-binary,
     cardano-crypto,

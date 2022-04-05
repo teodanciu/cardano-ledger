@@ -102,8 +102,6 @@ module Cardano.Ledger.Shelley.LedgerState
   )
 where
 
-import qualified Data.ByteString.Base64 as B64
-import Cardano.Binary (serialize')
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -1631,7 +1629,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  (Era era, ToCBOR (Core.TxOut era)) =>
+  (Era era, Show (Core.TxOut era)) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -1641,7 +1639,8 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
       Map.partition (isBootstrapRedeemer . getField @"address") utxo
-    msg = "\nBOOM\n" <> (show . B64.encode . serialize' . UTxO $ redeemers) <> "\nEND BOOM\n" <> show (Map.size redeemers)
+    --msg = "\nBOOM\n" <> (show . B64.encode . serialize' . UTxO $ redeemers) <> "\nEND BOOM\n" <> show (Map.size redeemers)
+    msg = "\nBOOM\n" <> (show redeemers) <> "\nEND BOOM\n"
     acnt = if True then (error msg) else esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
