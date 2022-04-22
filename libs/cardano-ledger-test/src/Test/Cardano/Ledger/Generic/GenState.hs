@@ -16,10 +16,18 @@
 --   the ModelNewEpochState to reflect what we generated.
 module Test.Cardano.Ledger.Generic.GenState where
 
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (Signable))
+import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx
+  ( IsValid (..),
+    ScriptPurpose (Spending),
+  )
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (RdmrPtr), Redeemers (Redeemers), TxDats (TxDats))
+import Cardano.Ledger.Babbage.TxBody (Datum (Datum, DatumHash, NoDatum))
 import Cardano.Ledger.BaseTypes (Network (Testnet), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -38,6 +46,7 @@ import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), DState (..), LedgerState (..), PState (..), RewardAccounts, smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
@@ -50,7 +59,8 @@ import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Data.Maybe (mapMaybe)
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -60,12 +70,14 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Generic.Fields
+import Test.Cardano.Ledger.Generic.Fields (PParamsField (CollateralPercentage, KeyDeposit, MaxCollateralInputs, MaxTxExUnits, MaxTxSize, MaxValSize, MinfeeA, MinfeeB, PoolDeposit, ProtocolVersion), WitnessesField (AddrWits, DataWits, RdmrWits, ScriptWits))
 import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,
     alwaysTrue,
     obligation',
     primaryLanguage,
   )
+import Test.Cardano.Ledger.Generic.GenericWitnesses (neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum, witsVKeyNeeded')
 import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
     fromMUtxo,
@@ -648,3 +660,54 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         (gePParams (gsGenEnv gstate))
         (gsInitialRewards gstate)
         (gsInitialPoolParams gstate)
+
+allNeededWitnesses ::
+  ( Typeable era,
+    CC.Crypto (Crypto era),
+    Signable (CC.DSIGN (Crypto era)) (Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
+  ) =>
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  GenDelegs (Crypto era) ->
+  GenState era ->
+  SafeHash (Crypto era) EraIndependentTxBody ->
+  [ExUnits] ->
+  [WitnessesField era]
+allNeededWitnesses proof utxo txbody genDelegs genState hash exUnits =
+  [ witVKeys,
+    allScriptWits,
+    allDataWits
+  ]
+    ++ allRedeemerWits proof
+  where
+    keyHashes = witsVKeyNeeded' proof utxo txbody genDelegs
+    witVKeys = AddrWits $ Set.foldl' vkAccum Set.empty keyHashes
+    vkAccum s kh = case Map.lookup kh (gsKeys genState) of
+      Just kp -> Set.insert (makeWitnessVKey hash kp) s
+      Nothing -> s
+    scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
+    scriptWits = Map.restrictKeys (gsScripts genState) scriptHashes
+    -- Here I just map over the keys and get rid of the Tag. Is this the right way to do it?
+    plutusScriptWits = snd <$> Map.restrictKeys (Map.mapKeys fst $ gsPlutusScripts genState) scriptHashes
+    allScriptWits = ScriptWits $ scriptWits <> plutusScriptWits
+    dataHashes = neededDataHashes proof plutusScriptWits txbody utxo
+    allDataWits = DataWits . TxDats $ Map.restrictKeys (gsDatums genState) dataHashes
+    spendPtrs = filter spendFilter $ neededRedeemers proof utxo txbody
+    spendFilter (RdmrPtr Spend _) = True
+    spendFilter _ = False
+    scriptPurposes = mapMaybe (strictMaybeToMaybe . rdptrInv' proof txbody) spendPtrs
+    scriptTxOuts = mapMaybe purposeToTxOut scriptPurposes
+    purposeToTxOut (Spending x) = Map.lookup x $ unUTxO utxo
+    purposeToTxOut _ = error "This should never happen"
+    allRedeemerWits (Babbage _) = return . RdmrWits . Redeemers . Map.fromList $ do
+      -- It might be better to generate the exUnits inside this function, so that
+      -- the caller does not have to guess how many redeemers there are
+      (rptr, txout, eu) <- zip3 spendPtrs scriptTxOuts exUnits
+      case txOutLookupDatum proof txout of
+        NoDatum -> []
+        DatumHash dh -> case Map.lookup dh (gsDatums genState) of
+          Just d -> return (rptr, (d, eu))
+          Nothing -> []
+        Datum d -> return (rptr, (binaryDataToData d, eu))
+    allRedeemerWits _ = mempty
