@@ -7,7 +7,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -19,12 +18,11 @@ module Test.Cardano.Ledger.Generic.GenState where
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (Signable))
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
+import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData, binaryDataToData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.Tx
-  ( IsValid (..),
-    ScriptPurpose (Spending),
+  ( ScriptPurpose (Spending),
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (RdmrPtr), Redeemers (Redeemers), TxDats (TxDats))
 import Cardano.Ledger.Babbage.TxBody (Datum (Datum, DatumHash, NoDatum))
@@ -33,13 +31,13 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..), EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( KeyHash (..),
     KeyPair (..),
     KeyRole (..),
     coerceKeyRole,
-    hashKey,
+    hashKey, GenDelegs
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
@@ -69,13 +67,12 @@ import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Generic.Fields
-import Test.Cardano.Ledger.Generic.Fields (PParamsField (CollateralPercentage, KeyDeposit, MaxCollateralInputs, MaxTxExUnits, MaxTxSize, MaxValSize, MinfeeA, MinfeeB, PoolDeposit, ProtocolVersion), WitnessesField (AddrWits, DataWits, RdmrWits, ScriptWits))
+import Test.Cardano.Ledger.Generic.Fields hiding (Datum)
 import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,
     alwaysTrue,
     obligation',
-    primaryLanguage,
+    primaryLanguage, scriptsNeeded'
   )
 import Test.Cardano.Ledger.Generic.GenericWitnesses (neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum, witsVKeyNeeded')
 import Test.Cardano.Ledger.Generic.ModelState
@@ -85,7 +82,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     instantaneousRewardsZero,
     mNewEpochStateZero,
     pPUPStateZero,
-    pcModelNewEpochState,
+    pcModelNewEpochState, toMUtxo
   )
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -109,6 +106,10 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
+import Data.Data (Typeable)
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Shelley.API (UTxO, unUTxO)
+import Cardano.Ledger.SafeHash (SafeHash)
 
 -- import Debug.Trace(trace)
 

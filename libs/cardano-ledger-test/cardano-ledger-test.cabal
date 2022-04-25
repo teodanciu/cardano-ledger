@@ -42,6 +42,7 @@ library
     Data.Group.GrpMap
     Data.Functor.PiecewiseConstant
     Test.Cardano.Ledger.Orphans
+    Test.Cardano.Ledger.Generic.GenericWitnesses
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.BaseTypes
