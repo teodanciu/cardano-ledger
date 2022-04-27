@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,10 +15,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Cardano.Ledger.Generic.TxGen where
 
-import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
+import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData, binaryDataToData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
 -- ====================
@@ -25,7 +28,12 @@ import Cardano.Ledger.Alonzo.Scripts
 
 -- pcTxOut,
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+-- ====================
+
+-- toMUtxo,
+
+-- pcTxOut,
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (Spending))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -42,7 +50,7 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
-    coerceKeyRole,
+    coerceKeyRole, Hash, GenDelegs (GenDelegs)
   )
 import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
@@ -110,21 +118,35 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoTest,
     modifyModel,
     runGenRS,
-    genExUnits,
+    ioGenRS, 
+    small
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
     ModelNewEpochState (..),
     UtxoEntry,
     fromMUtxo,
-    pcModelNewEpochState,
+    pcModelNewEpochState, toMUtxo
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcUTxO, pcWitnesses)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
+import Cardano.Ledger.Babbage.TxBody (spendInputs', collateralInputs', referenceInputs', Datum (NoDatum))
+import Cardano.Ledger.Babbage.Tx (ValidatedTx(ValidatedTx))
+import Debug.Trace (traceM)
+import qualified Cardano.Ledger.Core as CC
+import Data.Data (Typeable)
+import qualified Cardano.Ledger.Crypto as C
+import Cardano.Crypto.DSIGN (Signable)
+import Test.Cardano.Ledger.Generic.GenericWitnesses (witsVKeyNeeded', neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum)
+import Data.Map (mapMaybe)
+import Data.Maybe.Strict (strictMaybeToMaybe)
+import qualified Data.Maybe as M
+import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
+import Control.Monad.List (join)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -685,10 +707,10 @@ timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 
 -- ============================================================================
 
-genValidatedTx :: forall era. Reflect era => Proof era -> GenRS era (UTxO era, Core.Tx era)
+genValidatedTx :: forall era. Reflect era => Proof era -> GenRS era (UTxO era, Core.Tx era, CC.Witnesses era, CC.Witnesses era)
 genValidatedTx proof = do
-  (utxo, tx, _fee, _old) <- genValidatedTxAndInfo proof
-  pure (utxo, tx)
+  (utxo, tx, _fee, _old, old, new) <- genValidatedTxAndInfo proof
+  pure (utxo, tx, old, new)
 
 genValidatedTxAndInfo ::
   forall era.
@@ -699,7 +721,9 @@ genValidatedTxAndInfo ::
     ( UTxO era,
       Core.Tx era,
       UtxoEntry era, -- The fee key
-      Maybe (UtxoEntry era) -- from oldUtxO
+      Maybe (UtxoEntry era), -- from oldUtxO
+      CC.Witnesses era,
+      CC.Witnesses era
     )
 genValidatedTxAndInfo proof = do
   GenEnv {geValidityInterval, gePParams} <- gets gsGenEnv
@@ -814,11 +838,12 @@ genValidatedTxAndInfo proof = do
         onlyNecessaryScripts proof bogusNeededScripts $
           redeemerDatumWits
             <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
-      bogusTxForFeeCalc =
+  noFeeWits' <- allNeededWitnesses proof (UTxO utxoChoices) txBodyNoFee txBodyNoFeeHash
+  let bogusTxForFeeCalc =
         coreTx
           proof
           [ Body txBodyNoFee,
-            Witnesses (assembleWits proof noFeeWits),
+            Witnesses (assembleWits proof noFeeWits'),
             Valid isValid,
             AuxData' []
           ]
@@ -859,11 +884,13 @@ genValidatedTxAndInfo proof = do
         onlyNecessaryScripts proof neededScripts $
           redeemerDatumWits
             <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
-      validTx =
+  wits' <- allNeededWitnesses proof (UTxO utxo) txBody txBodyHash
+
+  let validTx =
         coreTx
           proof
           [ Body txBody,
-            Witnesses (assembleWits proof wits),
+            Witnesses (assembleWits proof wits'),
             Valid isValid,
             AuxData' []
           ]
@@ -885,14 +912,32 @@ genValidatedTxAndInfo proof = do
             mUTxO = utxo -- This is the UTxO that will run this Tx,
           }
     )
-  pure (fromMUtxo utxo, validTx, feepair, maybeoldpair)
+  pure (fromMUtxo utxo, validTx, feepair, maybeoldpair, assembleWits proof wits, assembleWits proof wits')
+
+testWitnesses :: IO ()
+testWitnesses =
+  do
+    ((utxo, tx@(ValidatedTx txbody _ _ _), _, _, _, _), _) <- ioGenRS (Babbage Mock) small (genValidatedTxAndInfo (Babbage Mock))
+    let inputs = Set.unions
+          [ spendInputs' txbody
+          , collateralInputs' txbody
+          , referenceInputs' txbody
+          ]
+    let m = toMUtxo utxo
+    let mUseful = Map.restrictKeys m inputs
+    print . pcUTxO (Babbage Mock) $ fromMUtxo mUseful
+    print $ pcTx (Babbage Mock) tx
 
 -- | Keep only Script witnesses that are neccessary in 'era',
+
 onlyNecessaryScripts :: Proof era -> Set (ScriptHash (Crypto era)) -> [WitnessesField era] -> [WitnessesField era]
 onlyNecessaryScripts _ _ [] = []
 onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
   ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
 onlyNecessaryScripts proof hashes (x : xs) = x : onlyNecessaryScripts proof hashes xs
+
+--onlyNecessaryKeys :: Proof era -> []
+--onlyNecessaryKeys proof = undefined
 
 -- | Scan though the fields unioning all the RdrmWits fields into one Redeemer map
 mkTxrdmrs :: forall era. Era era => [WitnessesField era] -> Redeemers era
@@ -914,10 +959,11 @@ mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
 -- An encapsulation of the Top level types we generate,
 -- but that has its own Show instance that we can control.
 
-data Box era = Box (Proof era) (TRC (Core.EraRule "LEDGER" era)) (GenState era)
+data Box era = Box (Proof era) (TRC (Core.EraRule "LEDGER" era)) (GenState era) (CC.Witnesses era) (CC.Witnesses era)
 
 instance
   ( Era era,
+    Reflect era,
     PrettyA (State (Core.EraRule "LEDGER" era)),
     PrettyA (Core.Script era),
     PrettyA (Signal (Core.EraRule "LEDGER" era)),
@@ -925,11 +971,13 @@ instance
   ) =>
   Show (Box era)
   where
-  show (Box _proof (TRC (_env, _state, _sig)) _gs) =
+  show (Box _proof (TRC (_env, _state, _sig)) _gs old new) =
     show $
       ppRecord
         "Box"
-        []
+        [ ("OldWitnesses", pcWitnesses _proof old)
+        , ("NewWitnesses", pcWitnesses _proof new)
+        ]
 
 -- Sample things we might use in the Box
 -- ("Tx", tcTx proof _sig)
@@ -940,7 +988,7 @@ instance
 testTx :: IO ()
 testTx = do
   let proof = Babbage Mock
-  ((_utxo, tx, _feepair, _), genstate) <- generate $ runGenRS proof def (genValidatedTxAndInfo proof)
+  ((_utxo, tx, _feepair, _, _, _), genstate) <- generate $ runGenRS proof def (genValidatedTxAndInfo proof)
   let m = gsModel genstate
       count = mCount m
   putStrLn (show (pcTx proof tx))
@@ -963,3 +1011,72 @@ applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Shelley _) trc = runShelleyBase $ applySTS trc
+
+-- | Generate a list of specified length with randomish `ExUnit`s where the sum
+--   of all values produced will not exceed the maxTxExUnits.
+genExUnits :: Proof era -> Int -> GenRS era [ExUnits]
+genExUnits era n = do
+  GenEnv {gePParams} <- gets gsGenEnv
+  let ExUnits maxMemUnits maxStepUnits = maxTxExUnits' era gePParams
+  memUnits <- lift $ genSequenceSum maxMemUnits
+  stepUnits <- lift $ genSequenceSum maxStepUnits
+  pure $ zipWith ExUnits memUnits stepUnits
+  where
+    un = fromIntegral n
+    genUpTo maxVal (!totalLeft, !acc) _
+      | totalLeft == 0 = pure (0, 0 : acc)
+      | otherwise = do
+          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+          pure (totalLeft - x, x : acc)
+    genSequenceSum maxVal
+      | maxVal == 0 = pure $ replicate n 0
+      | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
+
+allNeededWitnesses ::
+  ( Reflect era
+  ) =>
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  SafeHash (Crypto era) EraIndependentTxBody ->
+  GenRS era [WitnessesField era]
+allNeededWitnesses proof utxo txbody hash =
+  do
+    genState <- get
+    let keyHashes = witsVKeyNeeded' proof utxo txbody (GenDelegs mempty)
+        witVKeys = AddrWits $ Set.foldl' vkAccum Set.empty keyHashes
+        vkAccum s kh = case Map.lookup kh (gsKeys genState) of
+          Just kp -> Set.insert (makeWitnessVKey hash kp) s
+          Nothing -> s
+        scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
+        scriptWits = Map.restrictKeys (gsScripts genState) scriptHashes
+        plutusScriptWits = snd <$> Map.restrictKeys (Map.mapKeys fst $ gsPlutusScripts genState) scriptHashes
+        allScriptWits = ScriptWits $ scriptWits <> plutusScriptWits
+        dataHashes = neededDataHashes proof plutusScriptWits txbody utxo
+        allDataWits = DataWits . TxDats $ Map.restrictKeys (gsDatums genState) dataHashes
+        spendFilter (RdmrPtr Spend _) = True
+        spendFilter _ = False
+        spendPtrs = filter spendFilter $ neededRedeemers proof utxo txbody
+        scriptPurposes = M.mapMaybe (strictMaybeToMaybe . rdptrInv' proof txbody) spendPtrs
+        purposeToTxOut (Spending x) = Map.lookup x $ unUTxO utxo
+        purposeToTxOut _ = error "This should never happen"
+        scriptTxOuts = M.mapMaybe purposeToTxOut scriptPurposes
+    exUnits <- genExUnits proof $ length spendPtrs
+    let allRedeemerWits (Babbage _) = return . RdmrWits . Redeemers . Map.fromList $ do
+          (rptr, txout, eu) <- zip3 spendPtrs scriptTxOuts exUnits
+          case txOutLookupDatum proof txout of
+            Babbage.NoDatum -> []
+            Babbage.DatumHash dh -> case Map.lookup dh (gsDatums genState) of
+              Just d -> return (rptr, (d, eu))
+              Nothing -> []
+            Babbage.Datum d -> return (rptr, (binaryDataToData d, eu))
+        allRedeemerWits _ = mempty
+    scriptVKeys <- sequence $ genGenericScriptWitness proof Nothing <$> Map.elems scriptWits
+    let allScriptVKeys = join $ scriptVKeys <*> [hash]
+    return $
+      [ witVKeys,
+        allScriptWits,
+        allDataWits
+      ]
+      ++ allScriptVKeys
+      ++ allRedeemerWits proof

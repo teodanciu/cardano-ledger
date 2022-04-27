@@ -109,7 +109,7 @@ import Test.Tasty.QuickCheck (Gen, choose, frequency, generate)
 genRsTxAndModel :: Reflect era => Proof era -> Model era -> Word64 -> GenRS era (Core.Tx era, Model era)
 genRsTxAndModel proof model0 n = do
   modifyModel (const model0)
-  (_, tx) <- genValidatedTx proof
+  (_, tx, _, _) <- genValidatedTx proof
   model1 <- gets gsModel
   let model2 = applyTx proof (fromIntegral n) model1 tx
   pure (tx, model2)

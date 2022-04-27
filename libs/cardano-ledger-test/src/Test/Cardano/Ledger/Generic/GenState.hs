@@ -16,27 +16,20 @@
 --   the ModelNewEpochState to reflect what we generated.
 module Test.Cardano.Ledger.Generic.GenState where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (Signable))
-import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, binaryDataToData, hashData)
+import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
-    ScriptPurpose (Spending),
   )
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (RdmrPtr), Redeemers (Redeemers), TxDats (TxDats))
-import Cardano.Ledger.Babbage.TxBody (Datum (Datum, DatumHash, NoDatum))
 import Cardano.Ledger.BaseTypes (Network (Testnet), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
-  ( GenDelegs,
-    KeyHash (..),
+  ( KeyHash (..),
     KeyPair (..),
     KeyRole (..),
     coerceKeyRole,
@@ -44,12 +37,9 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
-import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.API (UTxO, unUTxO)
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), DState (..), LedgerState (..), PState (..), RewardAccounts, smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
@@ -59,12 +49,10 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, get, gets, modify)
 import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
-import Data.Data (Typeable)
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -78,10 +66,8 @@ import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,
     alwaysTrue,
     obligation',
-    primaryLanguage,
-    scriptsNeeded', maxTxExUnits'
+    primaryLanguage
   )
-import Test.Cardano.Ledger.Generic.GenericWitnesses (neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum, witsVKeyNeeded')
 import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
     fromMUtxo,
@@ -90,7 +76,6 @@ import Test.Cardano.Ledger.Generic.ModelState
     mNewEpochStateZero,
     pPUPStateZero,
     pcModelNewEpochState,
-    toMUtxo,
   )
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -114,9 +99,6 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
-import qualified Data.Foldable as F
-import Data.Ratio ((%))
-import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 
 -- import Debug.Trace(trace)
 
@@ -669,72 +651,3 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         (gsInitialRewards gstate)
         (gsInitialPoolParams gstate)
 
--- | Generate a list of specified length with randomish `ExUnit`s where the sum
---   of all values produced will not exceed the maxTxExUnits.
-genExUnits :: Proof era -> Int -> GenRS era [ExUnits]
-genExUnits era n = do
-  GenEnv {gePParams} <- gets gsGenEnv
-  let ExUnits maxMemUnits maxStepUnits = maxTxExUnits' era gePParams
-  memUnits <- lift $ genSequenceSum maxMemUnits
-  stepUnits <- lift $ genSequenceSum maxStepUnits
-  pure $ zipWith ExUnits memUnits stepUnits
-  where
-    un = fromIntegral n
-    genUpTo maxVal (!totalLeft, !acc) _
-      | totalLeft == 0 = pure (0, 0 : acc)
-      | otherwise = do
-          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-          pure (totalLeft - x, x : acc)
-    genSequenceSum maxVal
-      | maxVal == 0 = pure $ replicate n 0
-      | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
-
-allNeededWitnesses ::
-  ( Typeable era,
-    CC.Crypto (Crypto era),
-    Signable (CC.DSIGN (Crypto era)) (Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
-  ) =>
-  Proof era ->
-  UTxO era ->
-  Core.TxBody era ->
-  GenDelegs (Crypto era) ->
-  GenState era ->
-  SafeHash (Crypto era) EraIndependentTxBody ->
-  GenRS era [WitnessesField era]
-allNeededWitnesses proof utxo txbody genDelegs genState hash =
-  do
-    let keyHashes = witsVKeyNeeded' proof utxo txbody genDelegs
-        witVKeys = AddrWits $ Set.foldl' vkAccum Set.empty keyHashes
-        vkAccum s kh = case Map.lookup kh (gsKeys genState) of
-          Just kp -> Set.insert (makeWitnessVKey hash kp) s
-          Nothing -> s
-        scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
-        scriptWits = Map.restrictKeys (gsScripts genState) scriptHashes
-    -- Here I just map over the keys and get rid of the Tag. Is this the right way to do it?
-        plutusScriptWits = snd <$> Map.restrictKeys (Map.mapKeys fst $ gsPlutusScripts genState) scriptHashes
-        allScriptWits = ScriptWits $ scriptWits <> plutusScriptWits
-        dataHashes = neededDataHashes proof plutusScriptWits txbody utxo
-        allDataWits = DataWits . TxDats $ Map.restrictKeys (gsDatums genState) dataHashes
-        spendFilter (RdmrPtr Spend _) = True
-        spendFilter _ = False
-        spendPtrs = filter spendFilter $ neededRedeemers proof utxo txbody
-        scriptPurposes = mapMaybe (strictMaybeToMaybe . rdptrInv' proof txbody) spendPtrs
-        purposeToTxOut (Spending x) = Map.lookup x $ unUTxO utxo
-        purposeToTxOut _ = error "This should never happen"
-        scriptTxOuts = mapMaybe purposeToTxOut scriptPurposes
-    exUnits <- genExUnits proof $ length spendPtrs
-    let allRedeemerWits (Babbage _) = return . RdmrWits . Redeemers . Map.fromList $ do
-          (rptr, txout, eu) <- zip3 spendPtrs scriptTxOuts exUnits
-          case txOutLookupDatum proof txout of
-            NoDatum -> []
-            DatumHash dh -> case Map.lookup dh (gsDatums genState) of
-              Just d -> return (rptr, (d, eu))
-              Nothing -> []
-            Datum d -> return (rptr, (binaryDataToData d, eu))
-        allRedeemerWits _ = mempty
-    return $
-      [ witVKeys,
-        allScriptWits,
-        allDataWits
-      ]
-      ++ allRedeemerWits proof

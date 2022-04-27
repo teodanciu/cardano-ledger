@@ -6,6 +6,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Generic.Fields
   ( TxField (.., AuxData', Valid'),
@@ -79,6 +81,7 @@ import qualified Data.Set as Set
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
+import qualified Cardano.Ledger.Crypto as CC
 
 -- =======================================================
 -- Fields are used to hold a single field of record. So the Field
@@ -150,6 +153,13 @@ data WitnessesField era
   | ScriptWits (Map (ScriptHash (Crypto era)) (Core.Script era))
   | DataWits (TxDats era)
   | RdmrWits (Redeemers era)
+
+instance CC.Crypto (Crypto era) => Show (WitnessesField era) where
+  show (AddrWits s) = "AddrWits " ++ show s
+  show (BootWits s) = "BootWits " ++ show s
+  show (ScriptWits s) = "ScriptWits " ++ show (Map.keys s)
+  show (DataWits s) = "DataWits " ++ show s
+  show (RdmrWits s) = "RdmrWits " ++ show s
 
 pattern AddrWits' :: Era era => [WitVKey 'Witness (Crypto era)] -> WitnessesField era -- Set
 
