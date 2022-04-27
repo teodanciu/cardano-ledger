@@ -664,7 +664,7 @@ genRecipientsFrom txOuts = do
   let extra = outCount - approxCount
       avgExtra = ceiling (toInteger extra % toInteger approxCount)
       genExtra e
-        | e <= 0 || outCount == 0 || avgExtra == 0 = pure 0
+        | e <= 0 || avgExtra == 0 = pure 0
         | otherwise = lift $ chooseInt (0, avgExtra)
   let goNew _ [] !rs = pure rs
       goNew e (tx : txs) !rs = do
@@ -684,7 +684,9 @@ genRecipientsFrom txOuts = do
             let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
              in pure (coreTxOut reify fields : change : rs)
           else pure (coreTxOut reify fields : rs)
-  goNew extra txOuts []
+  ans <- goNew extra txOuts []
+  let new = List.foldl' (\a o -> a <+> getTxOutCoin reify o) mempty ans
+  seq new (pure ans)
 
 getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
 getDCertCredential = \case

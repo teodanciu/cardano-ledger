@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDepo
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
 import Control.State.Transition.Extended (STS (State))
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold
@@ -65,7 +64,6 @@ import Data.Map (Map, keysSet, restrictKeys)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.UMap as UMap
 import GHC.Records (HasField (getField))
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -323,6 +321,7 @@ languagesUsed proof tx utxo _plutusScripts = case proof of
   (Mary _) -> Set.empty
   (Alonzo _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo
   (Babbage _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo
+
 
 -- | Compute the total Ada from Ada pots within 't'
 class TotalAda t where

@@ -16,6 +16,7 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
+
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -32,6 +33,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     updateStakeDistribution,
   )
+
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
@@ -58,7 +60,7 @@ import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx, txSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp,testTraces)
 import Test.Cardano.Ledger.Generic.TxGen
   ( Box (..),
     applySTSByProof,
@@ -275,7 +277,8 @@ genericProperties =
     [ coreTypesRoundTrip,
       txPreserveAda,
       tracePreserveAda,
-      incrementalStake
+      incrementalStake,
+      testTraces
     ]
 
 -- ==============================================================

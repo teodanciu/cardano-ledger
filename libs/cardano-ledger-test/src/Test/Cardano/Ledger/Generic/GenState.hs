@@ -108,24 +108,24 @@ import Test.Tasty.QuickCheck
 
 -- | Constants that determine how big a GenState is generated.
 data GenSize = GenSize
-  { treasury :: Integer, -- DO WE EVER USE THIS?
-    reserves :: Integer, -- DO WE EVER USE THIS?
-    startSlot :: Word64,
-    blocksizeMax :: Integer,
-    collInputsMax :: Natural,
-    spendInputsMax :: Int,
-    refInputsMax :: Int,
-    utxoChoicesMax :: Int,
-    certificateMax :: Int,
-    withdrawalMax :: Int,
-    oldUtxoPercent :: Int -- between 0-100, 10 means pick an old UTxO 10% of the time
+  { treasury :: !Integer,
+    reserves :: !Integer,
+    startSlot :: !Word64,
+    blocksizeMax :: !Integer,
+    collInputsMax :: !Natural,
+    spendInputsMax :: !Int,
+    refInputsMax :: !Int,
+    utxoChoicesMax :: !Int,
+    certificateMax :: !Int,
+    withdrawalMax :: !Int,
+    oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
   }
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { geValidityInterval :: ValidityInterval,
-    gePParams :: Core.PParams era,
-    geSize :: GenSize
+  { geValidityInterval :: !ValidityInterval,
+    gePParams :: !(Core.PParams era),
+    geSize :: !GenSize
   }
 
 data GenState era = GenState

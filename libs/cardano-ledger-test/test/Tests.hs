@@ -8,6 +8,7 @@
 
 module Main where
 
+import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
@@ -17,6 +18,7 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     collectOrderingAlonzo,
   )
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
+import Test.Cardano.Ledger.Generic.Trace (testTraces)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -43,9 +45,12 @@ mainTests =
           collectOrderingAlonzo,
           modelUnitTests_
         ],
-      genericProperties
+      genericProperties,
+      testTraces 200
     ]
 
 -- main entry point
 main :: IO ()
-main = mainWithTestScenario tests
+main = do
+  hSetEncoding stdout utf8
+  mainWithTestScenario tests
