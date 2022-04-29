@@ -44,14 +44,18 @@ import Control.State.Transition.Extended (STS (..))
 import Control.State.Transition.Trace (Trace (..), lastState)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Data.Default.Class (Default (def))
+import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence as Seq (fromList)
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as SS
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
 import GHC.Word (Word64)
+import Prettyprinter (vsep)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
+import Test.Cardano.Ledger.Generic.Functions (getBody, getTxOutCoin, isValid')
 import Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
@@ -74,11 +78,11 @@ import Test.Cardano.Ledger.Generic.ModelState
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.TxGen
-  ( genValidatedTx,
-  )
+import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
 
@@ -209,7 +213,6 @@ showBlock txs = ppList pppair (zip txs [0 ..])
               ppString "\n"
             ]
 
-
 -- =====================================================================
 -- HasTrace instance of MOCKCHAIN depends on STS(MOCKCHAIN era) instance
 -- We show the type family instances here for reference.
@@ -285,7 +288,7 @@ genTrace proof numTxInTrace gsize = do
   traceFromInitState @(MOCKCHAIN era)
     testGlobals
     (fromIntegral (length vs))
-    (Gen1 (Vector.map (map snd) vs))
+    (Gen1 vs)
     (Just (\_ -> pure $ Right initState))
 
 traceProp ::
@@ -302,7 +305,6 @@ traceProp proof numTxInTrace gsize f = do
   trace <- genTrace proof numTxInTrace gsize
   pure (f (_traceInitState trace) (lastState trace))
 
-
 -- =========================================================================
 -- Test for just making a trace
 
@@ -314,10 +316,14 @@ chainTest ::
     Eq (Core.PParams era),
     Eq (State (Core.EraRule "PPUP" era)),
     Eq (StashedAVVMAddresses era)
+  ) =>
+  Proof era ->
+  Word64 ->
+  GenSize ->
   TestTree
 chainTest proof n gsize = testProperty message action
   where
-    message = "MockChainTrace in the (" ++ show proof ++ ") era."
+    message = "MockChainTrace: " ++ show proof ++ " era."
     action = do
       (vs, genstate) <- genTxSeq proof gsize n
       initState <- genMockChainState proof genstate

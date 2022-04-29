@@ -18,7 +18,6 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     collectOrderingAlonzo,
   )
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
-import Test.Cardano.Ledger.Generic.Trace (testTraces)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -45,8 +44,7 @@ mainTests =
           collectOrderingAlonzo,
           modelUnitTests_
         ],
-      genericProperties,
-      testTraces 200
+      genericProperties
     ]
 
 -- main entry point

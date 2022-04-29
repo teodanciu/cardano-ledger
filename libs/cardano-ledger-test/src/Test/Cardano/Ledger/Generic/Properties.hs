@@ -16,7 +16,6 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
-
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -33,7 +32,6 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     updateStakeDistribution,
   )
-
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
@@ -60,7 +58,7 @@ import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx, txSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp,testTraces)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen
   ( Box (..),
     applySTSByProof,
@@ -230,9 +228,14 @@ txPreserveAda =
     ]
 
 -- | Ada is preserved over a trace of length 100
-adaIsPreserved :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
+adaIsPreserved ::
+  ( Reflect era,
+    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  TestTree
 adaIsPreserved proof =
-  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
+  testProperty (show proof ++ "era. Trace length = 100") $
     withMaxSuccess 30 $
       traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
@@ -255,7 +258,7 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 
 incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
 incrementStakeInvariant proof =
-  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
+  testProperty (show proof ++ "era. Trace length = 100") $
     withMaxSuccess 30 $
       traceProp proof 100 def stakeInvariant
 
@@ -278,7 +281,7 @@ genericProperties =
       txPreserveAda,
       tracePreserveAda,
       incrementalStake,
-      testTraces
+      testTraces 100
     ]
 
 -- ==============================================================
