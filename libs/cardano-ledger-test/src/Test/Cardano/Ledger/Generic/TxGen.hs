@@ -30,7 +30,18 @@ import Cardano.Ledger.Alonzo.Scripts
 -- toMUtxo,
 
 -- pcTxOut,
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (Spending))
+-- ====================
+
+-- toMUtxo,
+
+-- pcTxOut,
+
+-- ====================
+
+-- toMUtxo,
+
+-- pcTxOut,
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (Spending, Certifying))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -260,7 +271,7 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
     Just script -> do
       let scriptWit = [ScriptWits' [script]]
       otherWit <- genGenericScriptWitness era mTag script
-      pure (\hash -> (scriptWit ++ otherWit hash))
+      pure (\hash -> scriptWit ++ otherWit hash)
 
 -- | Generator for witnesses necessary for Scripts and Key
 -- credentials. Because of the Key credentials generating function requires a body
@@ -854,29 +865,33 @@ genValidatedTxAndInfo proof = do
 
   -- 9. Construct the correct Tx with valid fee and collaterals
   allPlutusScripts <- gsPlutusScripts <$> get
-  let mIntegrityHash =
-        hashScriptIntegrity'
-          proof
-          gePParams
-          (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
-          (mkTxrdmrs redeemerDatumWits)
-          (mkTxdats redeemerDatumWits)
-      txBody =
+  let txBodyNoHash =
         overrideTxBody
           proof
           txBodyNoFee
           [ Txfee fee,
             Collateral (Map.keysSet collMap),
-            TotalCol (SJust (txInBalance (Map.keysSet collMap) utxo)),
-            WppHash mIntegrityHash
+            TotalCol (SJust (txInBalance (Map.keysSet collMap) utxo))
           ]
-      txBodyHash = hashAnnotated txBody
+      txBodyHash = hashAnnotated txBodyNoHash
+  wits' <- allNeededWitnesses proof (UTxO utxo) txBodyNoHash txBodyHash $ Just svks
+  let mIntegrityHash =
+        hashScriptIntegrity'
+          proof
+          gePParams
+          (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
+          (mkTxrdmrs wits')
+          (mkTxdats wits')
+      txBody =
+        overrideTxBody
+          proof
+          txBodyNoHash
+          [ WppHash mIntegrityHash ]
       neededScripts = scriptsNeeded' proof utxo txBody
       wits =
         onlyNecessaryScripts proof neededScripts $
           redeemerDatumWits
             <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
-  wits' <- allNeededWitnesses proof (UTxO utxo) txBody txBodyHash $ Just svks
 
   let validTx =
         coreTx
@@ -1058,11 +1073,16 @@ genRdmrData proof utxo txbody ptr@(RdmrPtr tag _) =
               Babbage.DatumHash dh -> return $ Map.lookup dh (gsDatums genState)
               Babbage.Datum d -> return . Just $ binaryDataToData d
             Nothing -> return Nothing
+      Just (Certifying (DCertDeleg (Delegate (Delegation (ScriptHashObj sh) _)))) ->
+        do
+          case Map.lookup (sh, tag) (gsPlutusScripts genState) of
+            Just _ -> Just <$> genDatum
+            Nothing -> return Nothing
       Just (Rewarding (RewardAcnt _ (ScriptHashObj sh))) ->
-          do
-            case Map.lookup (sh, tag) (gsPlutusScripts genState) of
-              Just _ -> Just <$> genDatum
-              Nothing -> return Nothing
+        do
+          case Map.lookup (sh, tag) (gsPlutusScripts genState) of
+            Just _ -> Just <$> genDatum
+            Nothing -> return Nothing
       _ -> return Nothing
 
 
