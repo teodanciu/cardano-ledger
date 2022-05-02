@@ -38,7 +38,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord,ppList)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -114,7 +114,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     fromMUtxo,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx,pcTxOut)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -677,7 +677,7 @@ genRecipientsFrom txOuts = do
           v = getTxOutVal reify txout
       genWithChange s txout rs = do
         let !(!addr, !v, !ds) = txoutFields reify txout
-        c <- Coin <$> lift (choose (1, unCoin $ coin v))
+        c <- (Coin . min 1) <$> lift (choose (1, unCoin $ coin v))  -- v could be 0
         fields <- genTxOut reify (s <+> inject c)
         if c < coin v
           then
@@ -685,8 +685,16 @@ genRecipientsFrom txOuts = do
              in pure (coreTxOut reify fields : change : rs)
           else pure (coreTxOut reify fields : rs)
   ans <- goNew extra txOuts []
+  let old = List.foldl' (\a o -> a <+> getTxOutCoin reify o) mempty txOuts
   let new = List.foldl' (\a o -> a <+> getTxOutCoin reify o) mempty ans
-  seq new (pure ans)
+  if new == old
+     then pure ans
+     else error ("Recipients have different totals "++show old++"  "++show new++"\nOld\n"++
+                 show(ppList (pcTxOut reify) txOuts)++"\nNew\n"++show(ppList (pcTxOut reify) ans)++
+                 "\noutCount="++show(outCount)++" approxCount="++show(approxCount)++" extra="++show extra++
+                 " avgExtra="++show(avgExtra))
+          
+    --  else seq new (pure ans)
 
 getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
 getDCertCredential = \case

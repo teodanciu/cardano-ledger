@@ -235,8 +235,8 @@ adaIsPreserved ::
   Proof era ->
   TestTree
 adaIsPreserved proof =
-  testProperty (show proof ++ "era. Trace length = 100") $
-    withMaxSuccess 30 $
+  testProperty (show proof ++ " era. Trace length = 100") $
+    withMaxSuccess 100 $
       traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
 tracePreserveAda :: TestTree
@@ -258,8 +258,8 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 
 incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
 incrementStakeInvariant proof =
-  testProperty (show proof ++ "era. Trace length = 100") $
-    withMaxSuccess 30 $
+  testProperty (show proof ++ " era. Trace length = 100") $
+    withMaxSuccess 100 $
       traceProp proof 100 def stakeInvariant
 
 incrementalStake :: TestTree
