@@ -16,7 +16,7 @@
 
 module Test.Cardano.Ledger.Generic.TxGen where
 
-import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData, binaryDataToData)
+import Cardano.Ledger.Alonzo.Data (Data, binaryDataToData, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
 -- ====================
@@ -41,7 +41,7 @@ import Cardano.Ledger.Alonzo.Scripts
 -- toMUtxo,
 
 -- pcTxOut,
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (Spending, Certifying))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (Certifying, Spending))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -49,16 +49,20 @@ import Cardano.Ledger.Alonzo.TxWitness
     TxDats (..),
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
+import Cardano.Ledger.Babbage.Tx (ScriptPurpose (Rewarding), ValidatedTx (ValidatedTx))
+import Cardano.Ledger.Babbage.TxBody (collateralInputs', referenceInputs', spendInputs')
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as CC
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
-  ( KeyHash,
+  ( GenDelegs (GenDelegs),
+    KeyHash,
     KeyRole (..),
-    coerceKeyRole, GenDelegs (GenDelegs)
+    coerceKeyRole,
   )
 import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
@@ -80,6 +84,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, replicateM)
+import Control.Monad.List (join)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -92,11 +97,12 @@ import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
-import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Maybe.Strict (StrictMaybe (..), strictMaybeToMaybe)
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -124,31 +130,27 @@ import Test.Cardano.Ledger.Generic.GenState
     getSpendInputsMax,
     getUtxoElem,
     getUtxoTest,
+    ioGenRS,
     modifyModel,
     runGenRS,
-    ioGenRS,
-    small
+    small,
   )
+import Test.Cardano.Ledger.Generic.GenericWitnesses (neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum, witsVKeyNeeded')
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
     ModelNewEpochState (..),
     UtxoEntry,
     fromMUtxo,
-    pcModelNewEpochState, toMUtxo
+    pcModelNewEpochState,
+    toMUtxo,
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcUTxO, pcWitnesses)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
+import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import Cardano.Ledger.Babbage.TxBody (spendInputs', collateralInputs', referenceInputs')
-import Cardano.Ledger.Babbage.Tx (ValidatedTx(ValidatedTx), ScriptPurpose (Rewarding))
-import qualified Cardano.Ledger.Core as CC
-import Test.Cardano.Ledger.Generic.GenericWitnesses (witsVKeyNeeded', neededDataHashes, neededRedeemers, rdptrInv', txOutLookupDatum)
-import Data.Maybe.Strict (strictMaybeToMaybe)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
-import Control.Monad.List (join)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -217,7 +219,7 @@ mkMultiSigWit era mTag (Shelley.RequireMOf m timelocks) = do
   ts <- take m <$> lift (shuffle (F.toList timelocks))
   F.fold <$> mapM (mkMultiSigWit era mTag) ts
 
--- | Used in Aonzo and Babbage and Mary Eras
+-- | Used in Alonzo and Babbage and Mary Eras
 mkTimelockWit ::
   forall era.
   (Reflect era) =>
@@ -831,18 +833,33 @@ genValidatedTxAndInfo proof = do
             AdHash' [],
             Txnetworkid networkId
           ]
-      txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
-      --bogusNeededScripts = scriptsNeeded' proof utxoNoCollateral txBodyNoFee
-      --noFeeWits :: [WitnessesField era]
-      --noFeeWits =
-      --  onlyNecessaryScripts proof bogusNeededScripts $
-      --    redeemerDatumWits
-      --      <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
+  --bogusNeededScripts = scriptsNeeded' proof utxoNoCollateral txBodyNoFee
+  --noFeeWits :: [WitnessesField era]
+  --noFeeWits =
+  --  onlyNecessaryScripts proof bogusNeededScripts $
+  --    redeemerDatumWits
+  --      <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
   svks <- scriptVKeys proof (UTxO utxoChoices) txBodyNoFee
-  noFeeWits' <- allNeededWitnesses proof (UTxO utxoChoices) txBodyNoFee txBodyNoFeeHash $ Just svks
-  let bogusTxForFeeCalc =
+  rdmrs <- allRedeemerWits proof (UTxO utxoChoices) txBodyNoFee
+  let pureAllWitnesses utxo txbody genState =
+        [ witVKeys,
+          allScriptWits,
+          DataWits dataWits,
+          RdmrWits rdmrs
+        ]
+          ++ join (svks <*> [hash])
+        where
+          hash = hashAnnotated txbody
+          witVKeys = allWitnessVKeys proof utxo txbody hash genState
+          multisigWits = allMultisigWits proof utxo txbody genState
+          plutusScriptWits = allPlutusScriptWits proof utxo txbody genState
+          allScriptWits = ScriptWits $ multisigWits <> plutusScriptWits
+          dataWits = allDataWits proof utxo txbody genState
+  genState <- get
+  let noFeeWits' = pureAllWitnesses (UTxO utxoChoices) txBodyNoFee genState
+      bogusTxForFeeCalc =
         coreTx
           proof
           [ Body txBodyNoFee,
@@ -874,19 +891,20 @@ genValidatedTxAndInfo proof = do
             TotalCol (SJust (txInBalance (Map.keysSet collMap) utxo))
           ]
       txBodyHash = hashAnnotated txBodyNoHash
-  wits' <- allNeededWitnesses proof (UTxO utxo) txBodyNoHash txBodyHash $ Just svks
+      utxo' = UTxO utxo
   let mIntegrityHash =
         hashScriptIntegrity'
           proof
           gePParams
           (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
-          (mkTxrdmrs wits')
-          (mkTxdats wits')
-      txBody =
+          rdmrs
+          (allDataWits proof utxo' txBodyNoHash genState)
+      wits' = pureAllWitnesses utxo' txBodyNoHash genState
+  let txBody =
         overrideTxBody
           proof
           txBodyNoHash
-          [ WppHash mIntegrityHash ]
+          [WppHash mIntegrityHash]
       neededScripts = scriptsNeeded' proof utxo txBody
       wits =
         onlyNecessaryScripts proof neededScripts $
@@ -925,18 +943,18 @@ testWitnesses :: IO ()
 testWitnesses =
   do
     ((utxo, tx@(ValidatedTx txbody _ _ _), _, _, _, _), _) <- ioGenRS (Babbage Mock) small (genValidatedTxAndInfo (Babbage Mock))
-    let inputs = Set.unions
-          [ spendInputs' txbody
-          , collateralInputs' txbody
-          , referenceInputs' txbody
-          ]
+    let inputs =
+          Set.unions
+            [ spendInputs' txbody,
+              collateralInputs' txbody,
+              referenceInputs' txbody
+            ]
     let m = toMUtxo utxo
     let mUseful = Map.restrictKeys m inputs
     print . pcUTxO (Babbage Mock) $ fromMUtxo mUseful
     print $ pcTx (Babbage Mock) tx
 
 -- | Keep only Script witnesses that are neccessary in 'era',
-
 onlyNecessaryScripts :: Proof era -> Set (ScriptHash (Crypto era)) -> [WitnessesField era] -> [WitnessesField era]
 onlyNecessaryScripts _ _ [] = []
 onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
@@ -982,8 +1000,8 @@ instance
     show $
       ppRecord
         "Box"
-        [ ("OldWitnesses", pcWitnesses _proof old)
-        , ("NewWitnesses", pcWitnesses _proof new)
+        [ ("OldWitnesses", pcWitnesses _proof old),
+          ("NewWitnesses", pcWitnesses _proof new)
         ]
 
 -- Sample things we might use in the Box
@@ -1033,12 +1051,11 @@ genExUnits era n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-          pure (totalLeft - x, x : acc)
+        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+        pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
-
 
 scriptVKeys ::
   ( Reflect era
@@ -1085,6 +1102,84 @@ genRdmrData proof utxo txbody ptr@(RdmrPtr tag _) =
             Nothing -> return Nothing
       _ -> return Nothing
 
+data WitGenState era = WitGenState
+  { wgsScriptData :: [Maybe (Data era)],
+    wgsExUnits :: [ExUnits],
+    wgsScriptVKeys :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
+  }
+
+allWitnessVKeys ::
+  forall era.
+  ( Reflect era
+  ) =>
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  SafeHash (Crypto era) EraIndependentTxBody ->
+  GenState era ->
+  WitnessesField era
+allWitnessVKeys proof utxo txbody hash genState = AddrWits $ Set.foldl' vkAccum Set.empty keyHashes
+  where
+    keyHashes = witsVKeyNeeded' proof utxo txbody (GenDelegs mempty)
+    vkAccum s kh = case Map.lookup kh (gsKeys genState) of
+      Just kp -> Set.insert (makeWitnessVKey hash kp) s
+      Nothing -> error "Key hash not found"
+
+allMultisigWits ::
+  forall era.
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  GenState era ->
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
+allMultisigWits proof utxo txbody genState = Map.restrictKeys (gsScripts genState) scriptHashes
+  where
+    scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
+
+allPlutusScriptWits ::
+  forall era.
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  GenState era ->
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
+allPlutusScriptWits proof utxo txbody genState = snd <$> Map.restrictKeys (Map.mapKeys fst $ gsPlutusScripts genState) scriptHashes
+  where
+    scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
+
+allDataWits ::
+  forall era.
+  Typeable era =>
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  GenState era ->
+  TxDats era
+allDataWits proof utxo txbody genState = TxDats $ Map.restrictKeys (gsDatums genState) dataHashes
+  where
+    plutusScriptWits = allPlutusScriptWits proof utxo txbody genState
+    dataHashes = neededDataHashes proof plutusScriptWits txbody utxo
+
+allRedeemerWits ::
+  forall era.
+  Era era =>
+  Proof era ->
+  UTxO era ->
+  Core.TxBody era ->
+  GenRS era (Redeemers era)
+allRedeemerWits proof utxo txbody =
+  do
+    let neededRdmrs = neededRedeemers proof utxo txbody
+    exUnits <- genExUnits proof $ length neededRdmrs
+    scriptData <- traverse (genRdmrData proof utxo txbody) neededRdmrs
+    return . Redeemers $ case proof of
+      Alonzo _ -> Map.fromList $ do
+        (rptr, Just dat, eu) <- zip3 neededRdmrs scriptData exUnits
+        return (rptr, (dat, eu))
+      Babbage _ -> Map.fromList $ do
+        (rptr, Just dat, eu) <- zip3 neededRdmrs scriptData exUnits
+        return (rptr, (dat, eu))
+      _ -> mempty
 
 allNeededWitnesses ::
   forall era.
@@ -1093,47 +1188,22 @@ allNeededWitnesses ::
   Proof era ->
   UTxO era ->
   Core.TxBody era ->
-  SafeHash (Crypto era) EraIndependentTxBody ->
-  Maybe [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]] ->
   GenRS era [WitnessesField era]
-allNeededWitnesses proof utxo txbody hash vkFuns =
+allNeededWitnesses proof utxo txbody =
   do
     genState <- get
-    let keyHashes = witsVKeyNeeded' proof utxo txbody (GenDelegs mempty)
-        witVKeys = AddrWits $ Set.foldl' vkAccum Set.empty keyHashes
-        vkAccum s kh = case Map.lookup kh (gsKeys genState) of
-          Just kp -> Set.insert (makeWitnessVKey hash kp) s
-          Nothing -> s
-        scriptHashes = scriptsNeeded' proof (toMUtxo utxo) txbody
-        scriptWits = Map.restrictKeys (gsScripts genState) scriptHashes
-        plutusScriptWits = snd <$> Map.restrictKeys (Map.mapKeys fst $ gsPlutusScripts genState) scriptHashes
-        allScriptWits = ScriptWits $ scriptWits <> plutusScriptWits
-        dataHashes = neededDataHashes proof plutusScriptWits txbody utxo
-        allDataWits = DataWits . TxDats $ Map.restrictKeys (gsDatums genState) dataHashes
-        neededRdmrs = neededRedeemers proof utxo txbody
-        --spendFilter (RdmrPtr Spend _) = True
-        --spendFilter _ = False
-        --spendPtrs = filter spendFilter neededRdmrs
-        --rewardFilter (RdmrPtr Rewrd _) = True
-        --rewardFilter _ = False
-        --rewardPtrs = filter rewardFilter neededRdmrs
-    scriptData <- traverse (genRdmrData proof utxo txbody) neededRdmrs
-    exUnits <- genExUnits proof $ length neededRdmrs
-    let allRedeemerWits :: Proof era -> [WitnessesField era]
-        allRedeemerWits (Alonzo _) = return . RdmrWits . Redeemers . Map.fromList $ do
-          (rptr, Just dat, eu) <- zip3 neededRdmrs scriptData exUnits
-          return (rptr, (dat, eu))
-        allRedeemerWits (Babbage _) = return . RdmrWits . Redeemers . Map.fromList $ do
-          (rptr, Just dat, eu) <- zip3 neededRdmrs scriptData exUnits
-          return (rptr, (dat, eu))
-        allRedeemerWits _ = mempty
-    svks <- case vkFuns of
-      Just x  -> return x
-      Nothing -> scriptVKeys proof utxo txbody
+    let hash = hashAnnotated txbody
+        witVKeys = allWitnessVKeys proof utxo txbody hash genState
+        multisigWits = allMultisigWits proof utxo txbody genState
+        plutusScriptWits = allPlutusScriptWits proof utxo txbody genState
+        allScriptWits = ScriptWits $ multisigWits <> plutusScriptWits
+        dataWits = allDataWits proof utxo txbody genState
+    redeemerWits <- allRedeemerWits proof utxo txbody
+    svks <- scriptVKeys proof utxo txbody
     return $
       [ witVKeys,
         allScriptWits,
-        allDataWits
+        DataWits dataWits,
+        RdmrWits redeemerWits
       ]
-      ++ join (svks <*> [hash])
-      ++ allRedeemerWits proof
+        ++ join (svks <*> [hash])

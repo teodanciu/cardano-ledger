@@ -180,6 +180,9 @@ type GenRS era = RWST (GenEnv era) () (GenState era) Gen
 
 type GenR era = Reader.ReaderT (GenState era) Gen
 
+liftGenR :: GenR era a -> GenRS era a
+liftGenR m = lift . Reader.runReaderT m =<< get
+
 genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
   | n == 0 = pure Nothing

@@ -274,8 +274,6 @@ ppUtxowPredicateFailure (InvalidMetadata) =
   ppSexp "InvalidMetadata" []
 ppUtxowPredicateFailure (ExtraneousScriptWitnessesUTXOW m) =
   ppSexp "ExtraneousScriptWitnessesUTXOW" [ppSet ppScriptHash m]
-ppUtxowPredicateFailure (ScriptHashInvalidEra hs) =
-  ppSexp "ScriptHashInvalidEra" [ppSet ppScriptHash hs]
 
 instance
   ( PrettyA (PredicateFailure (Core.EraRule "UTXO" era)),
