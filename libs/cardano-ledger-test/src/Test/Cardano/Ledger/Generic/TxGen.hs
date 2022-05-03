@@ -659,13 +659,13 @@ spendOnly txout = case getTxOutAddr txout of
 
 genRecipientsFrom :: Reflect era => [Core.TxOut era] -> GenRS era [Core.TxOut era]
 genRecipientsFrom txOuts = do
-  let outCount = length txOuts
-  approxCount <- lift $ choose (1, outCount)
-  let extra = outCount - approxCount
-      avgExtra = ceiling (toInteger extra % toInteger approxCount)
+  let outCount = length txOuts -- 10
+  approxCount <- lift $ choose (1, outCount) -- 5
+  let extra = outCount - approxCount -- 5
+      avgExtra = ceiling (toInteger extra % toInteger approxCount) -- 1
       genExtra e
         | e <= 0 || avgExtra == 0 = pure 0
-        | otherwise = lift $ chooseInt (0, avgExtra)
+        | otherwise = lift $ chooseInt (0, avgExtra) -- 1
   let goNew _ [] !rs = pure rs
       goNew e (tx : txs) !rs = do
         leftToAdd <- genExtra e
@@ -677,27 +677,33 @@ genRecipientsFrom txOuts = do
           v = getTxOutVal reify txout
       genWithChange s txout rs = do
         let !(!addr, !v, !ds) = txoutFields reify txout
-        c <- Coin <$> lift (choose (1, unCoin(coin v)))  -- v could be 0
-        fields <- genTxOut reify (s <+> inject c)
-        if c < coin v
-          then
-            let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
-             in pure (coreTxOut reify fields : change : rs)
-          else pure (coreTxOut reify fields : rs)
+            vCoin = unCoin (coin v)
+        if vCoin == 0
+          then pure rs
+          else do
+            c <- Coin <$> lift (choose (1, vCoin))
+            fields <- genTxOut reify (s <+> inject c)
+            pure $
+              if c < coin v
+                then
+                  let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
+                   in coreTxOut reify fields : change : rs
+                else coreTxOut reify fields : rs
   goNew extra txOuts []
-{-  
+
+{-
   ans <- goNew extra txOuts []
   let old = List.foldl' (\a o -> a <+> getTxOutCoin reify o) mempty txOuts
   let new = List.foldl' (\a o -> a <+> getTxOutCoin reify o) mempty ans
-  if True -- new == old
+  if old /= 0 && new == old
      then pure ans
      else error ("Recipients have different totals "++show old++"  "++show new++"\nOld\n"++
                  show(ppList (pcTxOut reify) txOuts)++"\nNew\n"++show(ppList (pcTxOut reify) ans)++
                  "\noutCount="++show(outCount)++" approxCount="++show(approxCount)++" extra="++show extra++
                  " avgExtra="++show(avgExtra))
--}                 
-          
-    --  else seq new (pure ans)
+-}
+
+--  else seq new (pure ans)
 
 getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
 getDCertCredential = \case
