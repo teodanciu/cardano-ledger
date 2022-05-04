@@ -899,12 +899,12 @@ genValidatedTxAndInfo proof = do
           (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
           rdmrs
           (allDataWits proof utxo' txBodyNoHash genState)
-      wits' = pureAllWitnesses utxo' txBodyNoHash genState
   let txBody =
         overrideTxBody
           proof
           txBodyNoHash
           [WppHash mIntegrityHash]
+      wits' = pureAllWitnesses utxo' txBody genState
       neededScripts = scriptsNeeded' proof utxo txBody
       wits =
         onlyNecessaryScripts proof neededScripts $
