@@ -21,5 +21,5 @@ jobs:
           destination-github-username: teodanciu
           destination-repository-name: docs-experiments
           user-email: teo.danciu@gmail.com
-          commit-message: "Add docs for version ${{ env.GITHUB_REF }}"
-          target-directory: docs-${{ env.GITHUB_REF }}
+          commit-message: "Add docs for version $GITHUB_REF"
+          target-directory: docs-$GITHUB_REF
