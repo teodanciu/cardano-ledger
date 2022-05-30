@@ -4,6 +4,8 @@ on:
   push: 
     branches: 
       - 'releases*'
+    tags: 
+      - 'cardano-ledger-spec-[0-9]+.[0-9]+.[0-9]+'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
