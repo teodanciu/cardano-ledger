@@ -5,24 +5,21 @@ on:
     tags:
       - 'cardano-ledger-spec-[0-9]+.[0-9]+.[0-9]+'
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  push-docs:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+      - name: Push docs to another repository
+        uses: cpina/github-action-push-to-another-repository@v1.4.2
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        with:
+          source-directory: docs
+          destination-github-username: teodanciu
+          destination-repository-name: docs-experiments
+          user-email: teo.danciu@gmail.com
+          commit-message: "Add docs for version ${{ env.GITHUB_REF }}"
+          target-directory: docs-${{ env.GITHUB_REF }}
