@@ -2,9 +2,8 @@ name: Version Specs
 
 on:
   push: 
-    tags: 
-      - v1.*
-      - v2
+    branches: 
+      - 'releases*'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
