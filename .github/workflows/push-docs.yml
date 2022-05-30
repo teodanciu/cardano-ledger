@@ -60,4 +60,4 @@ jobs:
         # [Optional] commit message for the output repository. ORIGIN_COMMIT is replaced by the URL@commit in the origin repo
         commit-message: "Added docs (automatically)"
         # [Optional] The directory to wipe and replace in the target repository
-        #target-directory: # optional, default is 
+        target-directory: docs
