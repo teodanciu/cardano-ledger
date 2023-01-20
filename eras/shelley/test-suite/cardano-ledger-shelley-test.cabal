@@ -31,6 +31,7 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -Wunused-packages
+                      -fprint-potential-instances
 
 library
   import:             base, project-config
@@ -167,6 +168,7 @@ test-suite cardano-ledger-shelley-test
       -- The 4 megabytes stack bound and 250 megabytes heap bound were
       -- determined ad-hoc.
       "-with-rtsopts=-K4m -M250m"
+      -fprint-potential-instances
   build-depends:
                 QuickCheck,
                 aeson >= 2,

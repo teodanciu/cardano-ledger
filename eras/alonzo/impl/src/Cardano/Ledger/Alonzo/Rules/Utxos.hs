@@ -255,7 +255,7 @@ scriptsValidateTransition = do
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
-  pure $! updateUTxOState u txBody depositChange ppup'
+  pure $! updateUTxOState pp u txBody depositChange ppup'
 
 scriptsNotValidateTransition ::
   forall era.
@@ -290,7 +290,7 @@ scriptsNotValidateTransition = do
     us
       { utxosUtxo = UTxO utxoKeep
       , utxosFees = fees <> coinBalance (UTxO utxoDel)
-      , utxosStakeDistr = updateStakeDistribution (utxosStakeDistr us) (UTxO utxoDel) mempty
+      , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) mempty
       }
 
 -- =======================================

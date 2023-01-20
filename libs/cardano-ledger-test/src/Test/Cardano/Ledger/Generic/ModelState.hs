@@ -250,7 +250,7 @@ ppupStateZero :: forall era. Reflect era => PPUPState era
 ppupStateZero = ppupStateZeroByProof @era (reify :: Proof era)
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
-uTxOStateZero = smartUTxOState utxoZero mempty mempty (ppupStateZero @era)
+uTxOStateZero = smartUTxOState pParamsZero utxoZero mempty mempty (ppupStateZero @era)
 
 pParamsZero :: Reflect era => Core.PParams era
 pParamsZero = lift pParamsZeroByProof
@@ -360,6 +360,7 @@ instance EraCrypto era ~ c => Extract (DPState c) era where
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
     smartUTxOState
+      (mPParams x)
       (UTxO (mUTxO x))
       (mDeposited x)
       (mFees x)

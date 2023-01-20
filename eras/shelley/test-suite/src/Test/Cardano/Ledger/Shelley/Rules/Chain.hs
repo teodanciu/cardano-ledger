@@ -213,6 +213,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             emptySnapShots
             ( LedgerState
                 ( smartUTxOState
+                    pp
                     utxo
                     (Coin 0)
                     (Coin 0)

@@ -11,6 +11,7 @@ module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Core (PParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
@@ -31,6 +32,7 @@ import Control.Monad
 import Control.Monad.Trans.Reader
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
+import Data.Default.Class (def)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -516,7 +518,7 @@ getLedgerState utxo LedgerState {..} dstate = do
   pure
     Shelley.LedgerState
       { Shelley.lsUTxOState =
-          Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
+          Shelley.smartUTxOState (def :: PParams CurrentEra) utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
       , Shelley.lsDPState =
           Shelley.DPState
             { Shelley.dpsDState = dstate
