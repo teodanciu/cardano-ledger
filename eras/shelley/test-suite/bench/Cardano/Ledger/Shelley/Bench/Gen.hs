@@ -43,6 +43,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Constants (
     maxMinFeeA,
     minGenesisUTxOouts
   ),
+  defaultConstants,
  )
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), ScriptSpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
@@ -121,7 +122,7 @@ genTriple ::
   Int ->
   IO (GenEnv era, ChainState era, GenEnv era -> IO (ShelleyTx era))
 genTriple proxy n = do
-  let ge = genEnv proxy
+  let ge = genEnv proxy defaultConstants
   cs <- genChainState n ge
   let fun genenv = generate $ genTx genenv ledgerEnv (esLState (nesEs (chainNes cs)))
   pure (ge, cs, fun)

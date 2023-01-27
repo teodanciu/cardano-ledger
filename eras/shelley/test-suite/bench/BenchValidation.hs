@@ -64,6 +64,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
@@ -107,7 +108,7 @@ genValidateInput ::
   Int ->
   IO (ValidateInput era)
 genValidateInput n = do
-  let ge = genEnv (Proxy :: Proxy era)
+  let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState n ge
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
@@ -196,7 +197,7 @@ genUpdateInputs ::
   Int ->
   IO (UpdateInputs (EraCrypto era))
 genUpdateInputs utxoSize = do
-  let ge = genEnv (Proxy :: Proxy era)
+  let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)

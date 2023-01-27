@@ -76,6 +76,7 @@ import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
@@ -109,12 +110,12 @@ relevantCasesAreCovered = do
   let tl = 100
   checkCoverage $
     forAllBlind
-      (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p) genesisChainSt)
+      (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
       relevantCasesAreCoveredForTrace
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
 
 relevantCasesAreCoveredForTrace ::
   forall era.
@@ -314,7 +315,7 @@ onlyValidLedgerSignalsAreGenerated =
   where
     p :: Proxy era
     p = Proxy
-    ge = genEnv p
+    ge = genEnv p defaultConstants
     genesisLedgerSt = Just $ mkGenesisLedgerState ge
 
 -- | Check that the abstract transaction size function
@@ -333,7 +334,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p)
+    (genEnv p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -342,7 +343,7 @@ propAbstractSizeBoundsBytes = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p)
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
@@ -367,7 +368,7 @@ propAbstractSizeNotTooBig = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p)
+    (genEnv p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -376,7 +377,7 @@ propAbstractSizeNotTooBig = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p)
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
 
 onlyValidChainSignalsAreGenerated ::
   forall era.
@@ -391,12 +392,12 @@ onlyValidChainSignalsAreGenerated =
     onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
       testGlobals
       100
-      (genEnv p)
+      (genEnv p defaultConstants)
       genesisChainSt
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
