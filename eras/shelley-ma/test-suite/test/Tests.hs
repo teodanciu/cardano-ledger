@@ -79,4 +79,4 @@ nightlyTests =
     ]
 
 main :: IO ()
-main = mainWithTestScenario tests
+main = mainWithTestScenario nightlyTests

@@ -44,4 +44,4 @@ nightlyTests =
 
 -- main entry point
 main :: IO ()
-main = mainWithTestScenario tests
+main = mainWithTestScenario nightlyTests

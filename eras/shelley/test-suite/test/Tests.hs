@@ -62,4 +62,4 @@ main :: IO ()
 main = do
   hSetEncoding stdout utf8
   sodiumInit
-  mainWithTestScenario tests
+  mainWithTestScenario nightlyTests
