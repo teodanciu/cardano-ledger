@@ -65,7 +65,7 @@ packages:
   libs/ledger-state
 
 program-options
-  ghc-options: -Werror
+  ghc-options: -Wwarn
 
 package plutus-preprocessor
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
