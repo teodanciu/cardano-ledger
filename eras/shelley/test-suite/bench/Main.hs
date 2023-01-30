@@ -23,7 +23,7 @@ import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
   genBlock,
   genTriple,
@@ -57,6 +57,7 @@ import Criterion.Main (
   whnf,
   whnfIO,
  )
+import Data.Default.Class (def)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
@@ -225,7 +226,7 @@ epochAt x =
       , bench "incrementalStakeDistr" (nf action2im arg)
       , env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
-            nf (incrementalStakeDistr incStake dstate) pstate
+            nf (\d -> incrementalStakeDistr (def :: PParams Shelley) incStake dstate d) pstate
       ]
   where
     n = 10000 :: Int
@@ -237,12 +238,13 @@ action2m ::
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
+  forall era.
   EraTxOut era =>
   (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
   let incStake = updateStakeDistribution mempty mempty utxo
-   in incrementalStakeDistr incStake dstate pstate
+   in incrementalStakeDistr (def :: PParams era) incStake dstate pstate
 
 -- =================================================================
 

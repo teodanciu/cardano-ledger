@@ -228,6 +228,7 @@ benchmark mainbench
                 cardano-strict-containers,
                 containers,
                 criterion,
+                data-default-class,
                 deepseq,
                 mtl,
                 set-algebra,

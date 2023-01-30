@@ -51,6 +51,7 @@ import Cardano.Ledger.EpochBoundary (
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
@@ -186,12 +187,14 @@ smartUTxOState utxo c1 c2 st =
 --   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
 --   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
 incrementalStakeDistr ::
-  forall c.
+  forall c era.
+  EraPParams era =>
+  PParams era ->
   IncrementalStake c ->
   DState c ->
   PState c ->
   SnapShot c
-incrementalStakeDistr incstake ds ps =
+incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
     delegs_
@@ -200,8 +203,13 @@ incrementalStakeDistr incstake ds ps =
     UMap tripmap ptrmap = dsUnified ds
     PState {psStakePoolParams = poolParams} = ps
     delegs_ = UM.viewToVMap (delegations ds)
-    -- A credential is active, only if it is being delegated
-    step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap incstake
+    -- A credential is active, only if it is being delegated: (dom activeDelegs ◁ credStake)
+    activeCreds = Map.filterWithKey (\k _ -> VMap.member k delegs_) credStake
+    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
+    step1 =
+      if ignorePtrs
+        then activeCreds
+        else resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap (IStake activeCreds ptrStake)
     step2 = aggregateActiveStake tripmap step1
 
 -- | Resolve inserts and deletes which were indexed by Ptrs, by looking them
@@ -214,10 +222,8 @@ resolveActiveIncrementalPtrs ::
   IncrementalStake c ->
   Map (Credential 'Staking c) Coin
 resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
-  Map.foldlWithKey' accum step1A ptrStake -- step1A  ∪ (dom activeDelegs ◁ ptrStake)
+  Map.foldlWithKey' accum credStake ptrStake -- step1A  ∪ (dom activeDelegs ◁ ptrStake)
   where
-    -- (dom activeDelegs ◁ credStake)
-    step1A = Map.filterWithKey (\k _ -> isActive k) credStake
     accum ans ptr coin =
       case Map.lookup ptr ptrMap_ of -- Map ptrs to Credentials
         Nothing -> ans

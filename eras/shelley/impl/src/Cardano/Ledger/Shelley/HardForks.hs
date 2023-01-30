@@ -9,6 +9,7 @@ module Cardano.Ledger.Shelley.HardForks (
   missingScriptsSymmetricDifference,
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
+  forgoPointerAddressResolution,
 )
 where
 
@@ -65,3 +66,8 @@ translateUpperBoundForPlutusScripts ::
   ProtVer ->
   Bool
 translateUpperBoundForPlutusScripts pv = pvMajor pv > natVersion @8
+
+forgoPointerAddressResolution ::
+  ProtVer ->
+  Bool
+forgoPointerAddressResolution pv = pvMajor pv > natVersion @8
