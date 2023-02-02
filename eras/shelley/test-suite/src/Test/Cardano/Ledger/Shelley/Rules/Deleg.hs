@@ -40,6 +40,7 @@ import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -70,7 +71,7 @@ delegProps ::
   ) =>
   Property
 delegProps =
-  forAllChainTrace @era traceLen $ \tr -> do
+  forAllChainTrace @era traceLen defaultConstants $ \tr -> do
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
