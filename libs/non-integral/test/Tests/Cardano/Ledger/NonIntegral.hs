@@ -287,7 +287,7 @@ property_power_diff_db :: IO ()
 property_power_diff_db =
   qcWithLabel
     "property pow diff in [0,1]: (a^(1/x))^y = (a^y)^(1/x)"
-    1000
+    1001
     prop_DPowDiff
 
 property_exponential_law_db :: IO ()
