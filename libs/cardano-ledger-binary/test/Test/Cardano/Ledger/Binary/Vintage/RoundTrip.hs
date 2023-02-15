@@ -39,7 +39,7 @@ roundTripWordBi =
 
 roundTripWord8Bi :: Property
 roundTripWord8Bi =
-  eachOf 1000 (Gen.word8 Range.constantBounded) roundTripsCBORBuildable
+  eachOf 1001 (Gen.word8 Range.constantBounded) roundTripsCBORBuildable
 
 roundTripWord16Bi :: Property
 roundTripWord16Bi =
