@@ -20,8 +20,8 @@ jobs:
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://cache.iog.io https://cache.nixos.org/
       - name: "Run tests: non-integral"
-        run: nix-build -A checks.tests.non-integral.non-integral-test
+        run: nix-build -A checks.tests.non-integral
       - name: "Run tests: cardano-ledger-binary"
-        run: nix-build -A checks.tests.cardano-ledger-binary.tests
+        run: nix-build -A checks.tests.cardano-ledger-binary
       - name: "Run tests: set-algebra"
-        run: nix-build -A checks.tests.set-algebra.tests
+        run: nix-build -A checks.tests
