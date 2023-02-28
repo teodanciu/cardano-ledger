@@ -3,6 +3,8 @@ run-name: ${{ github.event_name == 'schedule' && 'NIGHTLY'}}
 on:
   push:
     branches: [ "master" ]
+  pull_request:
+    branches: [ "**" ]
   workflow_dispatch:
   schedule:
     # "Nightly" builds: Every day at 06:00 UTC
