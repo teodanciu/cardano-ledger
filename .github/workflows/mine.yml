@@ -23,8 +23,8 @@ jobs:
     steps:
       - name: "Say Hello Mona it's Monday"
         run: |
-          echo "COMMIT? ${{ github.event.head_commit.message}}"
-          echo "PR TITLE? ${{ github.event.pull_request.title }}""
+          echo "COMMIT- ${{ github.event.head_commit.message}}"
+          echo "PR TITLE- ${{ github.event.pull_request.title }}""
           echo "PR TITLE EMPTY- ${{github.event.pull_request.title == ''"
           echo "COMMIT EMPTY- ${{github.event.head_commit.message == ''"
 
