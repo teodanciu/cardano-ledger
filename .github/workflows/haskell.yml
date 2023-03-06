@@ -8,7 +8,7 @@ on:
   schedule:
     # "Nightly" builds: Every day at 06:00 UTC
     - cron: '0 6 * * *'
-  workflow_dispatch:
+  workflow_dispatch: #manual
 
 # Cancel running actions when a new action on the same PR is started
 concurrency:
