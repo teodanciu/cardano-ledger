@@ -10,6 +10,7 @@ module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
@@ -46,7 +47,7 @@ defaultTests =
     , Canonical.tests
     , CDDL.tests 5
     , Golden.tests
-    , GoldenTranslation.tests
+    , GoldenTranslation.tests @(AlonzoEra StandardCrypto)
     , PlutusScriptExamples.tests
     , TxInfo.tests
     ]

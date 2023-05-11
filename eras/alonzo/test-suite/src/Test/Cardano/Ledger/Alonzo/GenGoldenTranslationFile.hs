@@ -1,26 +1,37 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Main where
+module Test.Cardano.Ledger.Alonzo.GenGoldenTranslationFile (
+  genGoldenFile,
+) where
 
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Core (eraProtVerHigh)
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Cardano.Ledger.Core
 
 import Cardano.Ledger.Binary.Encoding (serialize)
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_alonzo_test ()
 
-import Cardano.Ledger.Language (Language (..))
-import Test.Cardano.Ledger.Alonzo.TranslationInstance (translationInstances)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
+import Cardano.Ledger.Language (Language)
+import Test.Cardano.Ledger.Alonzo.TranslationInstance (ArbitraryValidTx (..), translationInstances)
+import Test.QuickCheck (Arbitrary)
 
-file :: String
-file = "eras/alonzo/test-suite/golden/translations.cbor"
-
--- | Generates arguments for `alonzoTxInfo`, applies them to `alonzoTxInfo`
+-- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it
 -- and serializes both arguments and result to golden/translations.cbor file
-main :: IO ()
-main = do
-  putStrLn "Generating golden files for TxInfo"
-  instances <- translationInstances 100 [PlutusV1]
-  let cbor = serialize (eraProtVerHigh @Alonzo) instances
-  BSL.writeFile file cbor
+genGoldenFile ::
+  forall era.
+  ( ExtendedUTxO era
+  , ArbitraryValidTx era
+  , Arbitrary (PParams era)
+  ) =>
+  [Language] ->
+  FilePath ->
+  IO ()
+genGoldenFile ls file =
+  do
+    putStrLn "Generating golden files for TxInfo"
+    instances <- translationInstances @era 1 ls
+    let cbor = serialize (eraProtVerHigh @era) instances
+    BSL.writeFile file cbor
