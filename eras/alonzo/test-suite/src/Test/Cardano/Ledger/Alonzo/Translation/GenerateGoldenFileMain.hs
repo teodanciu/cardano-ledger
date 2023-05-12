@@ -15,8 +15,8 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Language (Language (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Alonzo.GenGoldenTranslationFile (genGoldenFile)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (ArbitraryValidTx (..), translationInstances)
+import Test.Cardano.Ledger.Alonzo.Translation.Golden (generateGoldenFile)
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (ArbitraryValidTx (..), translationInstances)
 import Test.QuickCheck (
   Gen,
   arbitrary,
@@ -25,7 +25,7 @@ import Test.QuickCheck (
 
 -- | Generates golden translation file for Alonzo era
 main :: IO ()
-main = genGoldenFile @Alonzo [PlutusV1] "eras/alonzo/test-suite/golden/translations.cbor"
+main = generateGoldenFile @Alonzo [PlutusV1] "eras/alonzo/test-suite/golden/translations.cbor"
 
 instance forall era. Crypto era => ArbitraryValidTx (AlonzoEra era) where
   validTx l = suchThat (arbitrary :: Gen (Tx (AlonzoEra era))) validTxInToTxOutRatio
