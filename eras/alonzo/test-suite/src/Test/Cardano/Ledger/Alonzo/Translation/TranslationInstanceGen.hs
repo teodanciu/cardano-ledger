@@ -34,9 +34,6 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
 import Cardano.Ledger.UTxO (UTxO (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Lens.Micro ((^.))
 
 import Cardano.Ledger.Alonzo.TxInfo
 
@@ -46,14 +43,7 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
 
 class (EraTx era, Arbitrary (Core.Tx era)) => ArbitraryValidTx era where
   validTx :: Language -> Gen (Core.Tx era)
-  validTxInToTxOutRatio :: Core.Tx era -> Bool
-  validTxInToTxOutRatio =
-    let txInToTxOutRatio tx =
-          let txBody = tx ^. bodyTxL
-              txIns = txBody ^. inputsTxBodyL
-              txOuts = txBody ^. outputsTxBodyL
-           in Set.size txIns > 0 && length txOuts >= Set.size txIns
-     in txInToTxOutRatio
+  validUTxO :: Language -> Core.Tx era -> UTxO era
 
 translationInstances ::
   forall era.
@@ -79,7 +69,7 @@ genTranslationInstance ls = do
   pp <- arbitrary :: Gen (PParams era)
   language <- oneof (pure <$> ls)
   tx <- validTx @era language
-  let fullUtxo = utxoWithTx tx
+  let fullUtxo = validUTxO language tx
   let vtxInfoE = txInfo pp language epochInfo systemStart fullUtxo tx
   let vtxInfo = either (error . show) id vtxInfoE
   pure $ TranslationInstance pp language fullUtxo tx vtxInfo
@@ -89,10 +79,3 @@ epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 systemStart :: SystemStart
 systemStart = SystemStart $ posixSecondsToUTCTime 0
-
-utxoWithTx :: forall era. (EraTx era) => Core.Tx era -> UTxO era
-utxoWithTx tx =
-  let txBody = tx ^. bodyTxL
-      txIns = Set.toList $ txBody ^. inputsTxBodyL
-      txOuts = foldr (:) [] $ txBody ^. outputsTxBodyL
-   in UTxO (Map.fromList $ txIns `zip` txOuts)
