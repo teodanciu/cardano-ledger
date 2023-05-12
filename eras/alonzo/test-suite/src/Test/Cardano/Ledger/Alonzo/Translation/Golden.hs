@@ -3,24 +3,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.GenGoldenTranslationFile (
-  genGoldenFile,
+module Test.Cardano.Ledger.Alonzo.Translation.Golden (
+  generateGoldenFile,
 ) where
 
 import Cardano.Ledger.Core
 
 import Cardano.Ledger.Binary.Encoding (serialize)
 import qualified Data.ByteString.Lazy as BSL
-import Paths_cardano_ledger_alonzo_test ()
 
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Language (Language)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (ArbitraryValidTx (..), translationInstances)
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (ArbitraryValidTx (..), translationInstances)
 import Test.QuickCheck (Arbitrary)
 
 -- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it
 -- and serializes both arguments and result to golden/translations.cbor file
-genGoldenFile ::
+generateGoldenFile ::
   forall era.
   ( ExtendedUTxO era
   , ArbitraryValidTx era
@@ -29,7 +28,7 @@ genGoldenFile ::
   [Language] ->
   FilePath ->
   IO ()
-genGoldenFile ls file =
+generateGoldenFile ls file =
   do
     putStrLn "Generating golden files for TxInfo"
     instances <- translationInstances @era 1 ls
