@@ -35,6 +35,7 @@ library
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
         Test.Cardano.Ledger.Alonzo.Scripts
         Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen
         Test.Cardano.Ledger.Alonzo.Trace
 
     hs-source-dirs:   src
