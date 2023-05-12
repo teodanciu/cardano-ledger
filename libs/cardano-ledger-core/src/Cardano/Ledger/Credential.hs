@@ -7,14 +7,13 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
   GenesisCredential (..),
   PaymentCredential,
+  toKeyHashWitness,
   Ptr (Ptr),
   ptrSlotNo,
   ptrTxIx,
@@ -42,6 +41,7 @@ import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash,
   KeyRole (..),
+  asWitness,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
@@ -106,6 +106,12 @@ instance Crypto c => FromJSONKey (Credential kr c)
 type PaymentCredential c = Credential 'Payment c
 
 type StakeCredential c = Credential 'Staking c
+
+-- | Convert a KeyHash into a Witness KeyHash. Does nothing for Script credentials.
+toKeyHashWitness :: Credential r c -> Maybe (KeyHash 'Witness c)
+toKeyHashWitness = \case
+  KeyHashObj hk -> Just $ asWitness hk
+  ScriptHashObj _ -> Nothing
 
 data StakeReference c
   = StakeRefBase !(StakeCredential c)

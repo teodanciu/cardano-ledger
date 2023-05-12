@@ -8,7 +8,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -80,6 +79,7 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import Data.Foldable as F (foldMap')
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (
   StrictMaybe (..),
@@ -399,10 +399,8 @@ extractKeyHashWitnessSet ::
   forall (r :: KeyRole) c.
   [Credential r c] ->
   Set (KeyHash 'Witness c)
-extractKeyHashWitnessSet = foldr accum Set.empty
-  where
-    accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
-    accum _other ans = ans
+extractKeyHashWitnessSet =
+  F.foldMap' (maybe mempty Set.singleton . toKeyHashWitness)
 
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin

@@ -5,6 +5,7 @@
 * Add `certsTxBodyL` to `EraTxBody`
 * Introduce `TxCert` type family and `EraTxCert` type class.
 * Deprecate `Delegation`
+* Add `toKeyHashWitness`
 
 ## 1.2.0.0
 

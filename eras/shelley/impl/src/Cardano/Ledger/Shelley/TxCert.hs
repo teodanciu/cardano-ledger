@@ -389,3 +389,14 @@ isTreasuryMIRCert x = case getTxCertMir x of
 requiresVKeyWitness :: ShelleyEraTxCert era => TxCert era -> Bool
 requiresVKeyWitness (ShelleyTxCertDeleg (ShelleyRegCert _)) = False
 requiresVKeyWitness x = isNothing $ getTxCertMir x
+
+getVKeyWitnessShelleyTxCert = \case
+  ShelleyTxCertDelegCert delegCert ->
+    case delegCert of
+      -- Registration certificates do not require a witness
+      ShelleyRegCert _ -> Nothing
+      ShelleyUnRegCert cred -> credToKeyHashWitness cred
+      ShelleyDelegCert cred _ -> toKeyHashWitness cred
+  ShelleyTxCertPool poolCert -> poolCWitness poolCert
+  ShelleyTxCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
+  ShelleyTxCertMir !(MIRCert (EraCrypto era))

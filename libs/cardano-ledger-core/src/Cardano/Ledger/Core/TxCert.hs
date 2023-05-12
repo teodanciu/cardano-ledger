@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -27,6 +28,7 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
   VerKeyVRF,
+  asWitness,
  )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -49,6 +51,9 @@ class
   EraTxCert era
   where
   type TxCert era = (r :: Type) | r -> era
+
+  -- | Return a witness key whenever a certificate requires one
+  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness c)
 
   mkTxCertPool :: PoolCert (EraCrypto era) -> TxCert era
 
@@ -108,6 +113,11 @@ instance NoThunks (ConstitutionalDelegCert c)
 
 instance NFData (ConstitutionalDelegCert c) where
   rnf = rwhnf
+
+poolCertToKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
+poolCertToKeyHashWitness = \case
+  RegPool poolParams -> asWitness $ ppId poolParams
+  RetirePool poolId _ -> asWitness poolId
 
 poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
