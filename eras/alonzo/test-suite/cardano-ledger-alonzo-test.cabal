@@ -34,7 +34,7 @@ library
         Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
         Test.Cardano.Ledger.Alonzo.Scripts
-        Test.Cardano.Ledger.Alonzo.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
         Test.Cardano.Ledger.Alonzo.Trace
 
     hs-source-dirs:   src
@@ -84,7 +84,7 @@ executable gen-golden
         Test.Cardano.Ledger.Alonzo.GenGoldenTranslationFile
         Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
-        Test.Cardano.Ledger.Alonzo.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
 
     default-language: Haskell2010
     build-depends:

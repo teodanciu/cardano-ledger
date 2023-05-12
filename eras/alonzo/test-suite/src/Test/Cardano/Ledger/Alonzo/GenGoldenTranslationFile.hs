@@ -15,7 +15,7 @@ import Paths_cardano_ledger_alonzo_test ()
 
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Language (Language)
-import Test.Cardano.Ledger.Alonzo.TranslationInstance (ArbitraryValidTx (..), translationInstances)
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (ArbitraryValidTx (..), translationInstances)
 import Test.QuickCheck (Arbitrary)
 
 -- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it

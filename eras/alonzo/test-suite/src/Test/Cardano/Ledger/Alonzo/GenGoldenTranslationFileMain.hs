@@ -16,7 +16,7 @@ import Cardano.Ledger.Language (Language (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.GenGoldenTranslationFile (genGoldenFile)
-import Test.Cardano.Ledger.Alonzo.TranslationInstance (ArbitraryValidTx (..), translationInstances)
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (ArbitraryValidTx (..), translationInstances)
 import Test.QuickCheck (
   Gen,
   arbitrary,

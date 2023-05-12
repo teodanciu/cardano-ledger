@@ -31,7 +31,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_alonzo_test
-import Test.Cardano.Ledger.Alonzo.TranslationInstance
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, testCase)
 

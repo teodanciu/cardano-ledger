@@ -12,7 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.TranslationInstance (
+module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   ArbitraryValidTx (..),
   TranslationInstance (..),
   translationInstances,
