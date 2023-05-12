@@ -40,7 +40,9 @@ import Lens.Micro ((^.))
 
 import Cardano.Ledger.Alonzo.TxInfo
 
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
+  TranslationInstance (TranslationInstance),
+ )
 
 class (EraTx era, Arbitrary (Core.Tx era)) => ArbitraryValidTx era where
   validTx :: Language -> Gen (Core.Tx era)

@@ -46,9 +46,9 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V3 as PV3
 
-import Cardano.Ledger.Alonzo.TxInfo
+import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
 
-import Data.Typeable
+import Data.Typeable (Typeable)
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
 data TranslationInstance era = TranslationInstance

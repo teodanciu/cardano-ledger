@@ -41,7 +41,7 @@ generateGoldenFile ::
 generateGoldenFile ls file =
   do
     putStrLn "Generating golden files for TxInfo"
-    instances <- translationInstances @era 1 ls
+    instances <- translationInstances @era 100 ls
     let cbor = serialize (eraProtVerHigh @era) instances
     BSL.writeFile file cbor
 
