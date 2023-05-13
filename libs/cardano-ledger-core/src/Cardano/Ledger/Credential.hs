@@ -13,7 +13,8 @@ module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
   GenesisCredential (..),
   PaymentCredential,
-  toKeyHashWitness,
+  credKeyHashWitness,
+  credScriptHash,
   Ptr (Ptr),
   ptrSlotNo,
   ptrTxIx,
@@ -108,10 +109,16 @@ type PaymentCredential c = Credential 'Payment c
 type StakeCredential c = Credential 'Staking c
 
 -- | Convert a KeyHash into a Witness KeyHash. Does nothing for Script credentials.
-toKeyHashWitness :: Credential r c -> Maybe (KeyHash 'Witness c)
-toKeyHashWitness = \case
+credKeyHashWitness :: Credential r c -> Maybe (KeyHash 'Witness c)
+credKeyHashWitness = \case
   KeyHashObj hk -> Just $ asWitness hk
   ScriptHashObj _ -> Nothing
+
+-- | Extract ScriptHash from a Credential. Returns Nothing for KeyHashes
+credScriptHash :: Credential kr c -> Maybe (ScriptHash c)
+credScriptHash = \case
+  ScriptHashObj hs -> Just hs
+  KeyHashObj _ -> Nothing
 
 data StakeReference c
   = StakeRefBase !(StakeCredential c)

@@ -6,6 +6,7 @@
 * Introduce `TxCert` type family and `EraTxCert` type class.
 * Deprecate `Delegation`
 * Add `toKeyHashWitness`
+* Addition of `getVKeyWitnessTxCert` and `getScriptWitnessTxCert` to `EraTxCert` type class
 
 ## 1.2.0.0
 
