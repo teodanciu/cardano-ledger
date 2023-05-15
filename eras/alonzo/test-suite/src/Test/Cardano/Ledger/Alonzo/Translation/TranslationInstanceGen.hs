@@ -41,9 +41,9 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (TranslationInstance),
  )
 
-class (EraTx era, Arbitrary (Core.Tx era)) => ArbitraryValidTx era where
+class EraTx era => ArbitraryValidTx era where
   validTx :: Language -> Gen (Core.Tx era)
-  validUTxO :: Language -> Core.Tx era -> UTxO era
+  validUTxO :: Language -> Core.Tx era -> Gen (UTxO era)
 
 translationInstances ::
   forall era.
@@ -69,7 +69,7 @@ genTranslationInstance ls = do
   pp <- arbitrary :: Gen (PParams era)
   language <- oneof (pure <$> ls)
   tx <- validTx @era language
-  let fullUtxo = validUTxO language tx
+  fullUtxo <- validUTxO language tx
   let vtxInfoE = txInfo pp language epochInfo systemStart fullUtxo tx
   let vtxInfo = either (error . show) id vtxInfoE
   pure $ TranslationInstance pp language fullUtxo tx vtxInfo
