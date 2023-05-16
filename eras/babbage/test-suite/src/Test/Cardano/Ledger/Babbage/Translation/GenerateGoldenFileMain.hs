@@ -60,7 +60,7 @@ import Test.Cardano.Ledger.Babbage.Translation.TranslatableTxGen ()
 
 -- | Generates golden translation file for Babbage era
 main :: IO ()
-main = generateGoldenFile @Babbage [PlutusV2] "eras/babbage/test-suite/golden/translations.cbor"
+main = generateGoldenFile @Babbage [PlutusV1, PlutusV2] "eras/babbage/test-suite/golden/translations.cbor"
 
 -- instance Crypto era => ArbitraryValidTx (BabbageEra era) where
 --   validTx =

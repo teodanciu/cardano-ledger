@@ -278,7 +278,7 @@ transAddr (AddrBootstrap _bootaddr) = Nothing
 transTxOutAddr :: EraTxOut era => TxOut era -> Maybe PV1.Address
 transTxOutAddr txOut = do
   -- filter out Byron addresses without uncompacting them
-  case (trace ("!!!!!!!!!!!!" <> show (txOut ^. addrTxOutL)) txOut) ^. bootAddrTxOutF of
+  case (txOut ^. bootAddrTxOutF) of
     Just _ -> trace ("FUCK! NOTHING HERE") Nothing
     -- The presence of a Byron address is caught above in the Just case
     Nothing -> transAddr (txOut ^. addrTxOutL)

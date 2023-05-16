@@ -64,7 +64,7 @@ import Cardano.Ledger.Binary (
   mkSized,
  )
 import Cardano.Ledger.Binary.Version (natVersion)
-
+import Cardano.Ledger.TxIn (TxIn (..))
 
 instance forall era. Crypto era => ArbitraryValidTx (BabbageEra era) where
   validTx  = genTx
@@ -126,8 +126,9 @@ genTxWits = \case
 genTxBody :: forall era.Crypto era => Language -> Gen (BabbageTxBody (BabbageEra era) )
 genTxBody l = do
   let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @Babbage) <$> genTxOut @era l)
+  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn era))
   BabbageTxBody
-      <$> arbitrary
+      <$> genTxIns
       <*> arbitrary
       <*> ( case l of ----refinputs
               PlutusV1 -> pure Set.empty
