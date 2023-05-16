@@ -74,6 +74,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word (Word8)
+import Debug.Trace (trace)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Test.Examples as Plutus (
   alwaysFailingNAryFunction,
@@ -193,6 +194,30 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+genNonEmptyInputsTxBody ::
+  ( EraTxOut era
+  , EraTxCert era
+  , Arbitrary (TxOut era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (TxCert era)
+  ) =>
+  Gen (AlonzoTxBody era)
+genNonEmptyInputsTxBody =
+  AlonzoTxBody
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> scale (`div` 15) arbitrary
+    <*> arbitrary
+    <*> scale (`div` 15) arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 deriving newtype instance Arbitrary IsValid
 

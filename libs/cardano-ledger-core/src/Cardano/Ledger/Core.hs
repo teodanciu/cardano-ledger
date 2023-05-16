@@ -123,6 +123,7 @@ import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Word (Word64)
+import Debug.Trace (trace)
 import GHC.TypeLits (Symbol)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -299,12 +300,12 @@ class
 bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
 bootAddrTxOutF = to $ \txOut ->
   case txOut ^. addrEitherTxOutL of
-    Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
+    Left (AddrBootstrap bootstrapAddr) -> Just (trace ("MOTHERFUCKING HERE") bootstrapAddr)
     Right cAddr
       | isBootstrapCompactAddr cAddr -> do
           AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
           Just bootstrapAddr
-    _ -> Nothing
+    _ -> trace ("FUCKING HERE!!!!") Nothing
 {-# INLINE bootAddrTxOutF #-}
 
 coinTxOutL :: EraTxOut era => Lens' (TxOut era) Coin

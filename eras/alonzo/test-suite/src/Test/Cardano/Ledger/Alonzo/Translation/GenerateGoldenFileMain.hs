@@ -1,6 +1,6 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main where
@@ -21,10 +21,10 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (ArbitraryV
 import Test.QuickCheck (
   Gen,
   arbitrary,
-  suchThat,
   listOf1,
+  scale,
+  suchThat,
   vectorOf,
-  scale
  )
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), AlonzoTxBody (..))
@@ -33,8 +33,9 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), AlonzoTxBody (..))
 main :: IO ()
 main = generateGoldenFile @Alonzo [PlutusV1] "eras/alonzo/test-suite/golden/translations.cbor"
 
-instance Crypto era => ArbitraryValidTx (AlonzoEra era) where
-  validTx _ = arbitrary :: Gen (Tx (AlonzoEra era))
+instance ArbitraryValidTx Alonzo where
+  validTx _ = arbitrary :: Gen (Tx Alonzo)
+
   -- do
   --   tx <- arbitrary :: Gen (Tx (AlonzoEra era))
   --   nonEmptyIns <- listOf1 (arbitrary :: Gen (TxIn era))
@@ -45,5 +46,5 @@ instance Crypto era => ArbitraryValidTx (AlonzoEra era) where
 
   validUTxO _ tx = do
     let ins = tx ^. bodyTxL ^. inputsTxBodyL
-    outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut (AlonzoEra era)))
+    outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut Alonzo))
     pure $ UTxO (Map.fromList $ Set.toList ins `zip` outs)

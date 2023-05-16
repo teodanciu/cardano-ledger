@@ -41,6 +41,7 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (TranslationInstance),
  )
 
+-- TODO:Rename to ArbitraryTranslatableTx
 class EraTx era => ArbitraryValidTx era where
   validTx :: Language -> Gen (Core.Tx era)
   validUTxO :: Language -> Core.Tx era -> Gen (UTxO era)

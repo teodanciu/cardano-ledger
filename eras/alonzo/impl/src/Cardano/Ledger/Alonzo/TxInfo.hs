@@ -155,6 +155,7 @@ import Data.Text (Text, pack)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
+import Debug.Trace (trace)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
@@ -277,8 +278,8 @@ transAddr (AddrBootstrap _bootaddr) = Nothing
 transTxOutAddr :: EraTxOut era => TxOut era -> Maybe PV1.Address
 transTxOutAddr txOut = do
   -- filter out Byron addresses without uncompacting them
-  case txOut ^. bootAddrTxOutF of
-    Just _ -> Nothing
+  case (trace ("!!!!!!!!!!!!" <> show (txOut ^. addrTxOutL)) txOut) ^. bootAddrTxOutF of
+    Just _ -> trace ("FUCK! NOTHING HERE") Nothing
     -- The presence of a Byron address is caught above in the Just case
     Nothing -> transAddr (txOut ^. addrTxOutL)
 
