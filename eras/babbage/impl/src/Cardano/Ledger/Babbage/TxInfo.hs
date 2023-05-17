@@ -56,6 +56,7 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
+import Debug.Trace (trace)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import PlutusLedgerApi.V1.Contexts ()
@@ -138,7 +139,7 @@ txInfoInV1 ::
   Either (TranslationError (EraCrypto era)) PV1.TxInInfo
 txInfoInV1 (UTxO mp) txin =
   case Map.lookup txin mp of
-    Nothing -> Left (TranslationLogicMissingInput txin)
+    Nothing -> (trace "!!! HERE V1!!! " Left (TranslationLogicMissingInput txin))
     Just txout -> do
       out <- txInfoOutV1 (TxOutFromInput txin) txout
       Right (PV1.TxInInfo (Alonzo.txInfoIn' txin) out)
@@ -155,7 +156,7 @@ txInfoInV2 ::
   Either (TranslationError (EraCrypto era)) PV2.TxInInfo
 txInfoInV2 (UTxO mp) txin =
   case Map.lookup txin mp of
-    Nothing -> Left (TranslationLogicMissingInput txin)
+    Nothing -> (trace "!!! HERE V2!!! " Left (TranslationLogicMissingInput txin))
     Just txout -> do
       out <- txInfoOutV2 (TxOutFromInput txin) txout
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)

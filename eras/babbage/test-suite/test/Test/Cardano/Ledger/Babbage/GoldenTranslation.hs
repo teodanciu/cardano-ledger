@@ -16,16 +16,16 @@
 --
 -- To regenerate the golden file (for example, if the logic in the translation changes),
 -- run the following command from the root of the repository:
--- cabal run cardano-ledger-alonzotest:gen-golden"
-module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
+-- cabal run cardano-ledger-<era>-test:gen-golden"
+module Test.Cardano.Ledger.Babbage.GoldenTranslation (
   tests,
 )
 where
 
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 
-import Cardano.Ledger.Alonzo (Alonzo)
-import Paths_cardano_ledger_alonzo_test (getDataFileName)
+import Cardano.Ledger.Babbage (Babbage)
+import Paths_cardano_ledger_babbage_test (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (TxInfoResultComparison (..), compareGoldenTxInfoResults)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, testCase)
@@ -38,7 +38,7 @@ tests =
 
 check :: String -> Assertion
 check file = do
-  comps <- compareGoldenTxInfoResults @Alonzo (getDataFileName file)
+  comps <- compareGoldenTxInfoResults @Babbage (getDataFileName file)
   mapM_
     ( \(TxInfoResultComparison expected actual err) ->
         assertEqual err expected actual

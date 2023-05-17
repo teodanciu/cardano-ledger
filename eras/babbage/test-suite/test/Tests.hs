@@ -10,6 +10,7 @@ import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
 import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests, txInfoTestsBabbageOnly)
+import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as Golden (tests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -23,7 +24,8 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests
+    [ Golden.tests
+    , Tripping.tests
     , txInfoTests (Proxy @Babbage)
     , txInfoTestsBabbageOnly
     , CDDL.tests 5
