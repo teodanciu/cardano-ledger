@@ -16,10 +16,13 @@ instance Crypto c => EraTxCert (BabbageEra c) where
 
   getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
-  mkTxCertPool = ShelleyTxCertPool
+  mkRegPoolTxCert = ShelleyTxCertPool . RegPool
+  getRegPoolTxCert (ShelleyTxCertPool (RegPool poolParams)) = Just poolParams
+  getRegPoolTxCert _ = Nothing
 
-  getTxCertPool (ShelleyTxCertPool c) = Just c
-  getTxCertPool _ = Nothing
+  mkRetirePoolTxCert poolId epochNo = ShelleyTxCertPool $ RetirePool poolId epochNo
+  getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
+  getRetirePoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}
