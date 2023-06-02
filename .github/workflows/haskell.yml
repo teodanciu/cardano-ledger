@@ -197,8 +197,8 @@ jobs:
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
 
-  nix-build:
-    name: Build nix required derivations
+  nix-cache-check:
+    name: Check nix required derivations are cached (built by hydra or cicero)
     if: ${{ github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     steps:
@@ -210,4 +210,7 @@ jobs:
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=
             substituters = https://cache.iog.io https://cache.nixos.org/ https://cache.zw3rk.com
       - name: nix-build
-        run: nix build .#hydraJobs.required
+        # --max-jobs 0 ensure that everything is already cached
+        run: |
+          nix build --builders "" --max-jobs 0 .#hydraJobs.x86_64-linux.required
+          nix build --builders "" --max-jobs 0 .#hydraJobs.x86_64-darwin.required
