@@ -42,7 +42,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.7", "9.2.7", "9.6.1"]
+        # ghc: ["8.10.7", "9.2.7", "9.6.1"]
+        ghc: ["8.10.7"]
         os: [ubuntu-latest]
 
     steps:
@@ -51,6 +52,8 @@ jobs:
       if: ${{ github.event_name == 'schedule' }}
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
+    - name: Fail on purpose
+      run: return 1
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
