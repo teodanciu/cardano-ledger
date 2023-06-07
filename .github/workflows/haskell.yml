@@ -209,18 +209,18 @@ jobs:
           extra_nix_config: |
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=
             substituters = https://cache.iog.io https://cache.nixos.org/ https://cache.zw3rk.com
-      - name: nix-build
-        run: nix-build
+      # - name: nix-build
+      #   run: nix-build
       - name: nix-shell
         run: nix-shell shell.nix
 
   notify-nightly-failure:
     name: Send a slack notification on \#ledger-internal if the nightly build failed
-    if:  ${{ failure() }} && ${{ github.event_name == 'schedule'}}
     runs-on: ubuntu-latest
     needs:
-      - build
       - nix-build
+      - build
+    if:  ${{ github.event_name == 'schedule' }} && (${{needs.nix-build.result == 'failure' }} || ${{needs.build.result == 'failure'}})
     steps:
       - name: Send slack notification
         id: slack
