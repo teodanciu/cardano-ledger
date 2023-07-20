@@ -17,6 +17,7 @@ module Cardano.Ledger.Api.Tx.Body (
   Withdrawals (..),
   auxDataHashTxBodyL,
   AuxiliaryDataHash,
+  spendableInputsTxBodyF,
   allInputsTxBodyF,
   evalBalanceTxBody,
 
@@ -68,7 +69,15 @@ import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
+import Cardano.Ledger.Babbage.TxBody (
+  BabbageEraTxBody (..),
+  allSizedOutputsTxBodyF,
+  collateralReturnTxBodyL,
+  referenceInputsTxBodyL,
+  sizedCollateralReturnTxBodyL,
+  sizedOutputsTxBodyL,
+  totalCollateralTxBodyL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value)
