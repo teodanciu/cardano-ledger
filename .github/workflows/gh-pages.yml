@@ -1,4 +1,4 @@
-name: Github Pages
+name: GitHub Pages
 
 on:
   push:
@@ -23,17 +23,17 @@ jobs:
         run: nix develop --command bash -c 'cabal update && cabal build --enable-documentation all && ./scripts/haddocks.sh'
       - name: Add files
         run: |
-              git config --local user.name ${{ github.actor }}
-              git config --local user.email "${{ github.actor }}@users.noreply.github.com"
-              git add -A --force ./haddocks
-              git mv ./haddocks/* .
-              git commit -m "Updated"
-              rm -rf haddocks
+          git config --local user.name ${{ github.actor }}
+          git config --local user.email "${{ github.actor }}@users.noreply.github.com"
+          git add -A --force ./haddocks
+          git mv ./haddocks/* .
+          git commit -m "Updated from ${GITHUB_SHA} via ${GITHUB_EVENT_NAME}"
+          rm -rf haddocks
 
       - name: Push to gh-pages
         uses: ad-m/github-push-action@v0.6.0
         with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            branch: gh-pages
-            force: true
-            directory: .
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          force: true
+          directory: .
