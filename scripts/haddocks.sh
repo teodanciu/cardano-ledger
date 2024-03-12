@@ -62,7 +62,7 @@ for dir in $(ls "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}"); do
       for test_package in $(ls "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/t"); do
           if [ -d "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/t/${test_package}/doc/html/${package}/${test_package}" ]; then
               cp -r "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/t/${test_package}/doc/html/${package}/${test_package}" "${OUTPUT_DIR}/${package}:${test_package}"
-              cp -n "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/doc/html/${package}"/{*.css,*.js}  "${OUTPUT_DIR}/${package}:${test_package}"
+              cp -n "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/doc/html/${package}"/{*.css,*.js}  "${OUTPUT_DIR}/${package}:${test_package}" || true
           fi
       done
   fi
@@ -71,7 +71,7 @@ for dir in $(ls "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}"); do
       for lib_package in $(ls "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/l"); do
           if [ -d "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/l/${lib_package}/doc/html/${package}" ]; then
               cp -r "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/l/${lib_package}/doc/html/${package}" "${OUTPUT_DIR}/${package}:${lib_package}"
-              cp -n "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/doc/html/${package}"/{*.css,*.js}  "${OUTPUT_DIR}/${package}:${lib_package}"
+              cp -n "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/doc/html/${package}"/{*.css,*.js}  "${OUTPUT_DIR}/${package}:${lib_package}" || true
           fi
       done
   fi
