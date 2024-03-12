@@ -25,6 +25,15 @@ jobs:
         run: |
           git config --local user.name ${{ github.actor }}
           git config --local user.email "${{ github.actor }}@users.noreply.github.com"
+          # Preserve benchmark results, if any
+          git for-each-ref refs/remotes/origin/gh-pages --format='%(refname:short)' |
+            while read -r REFNAME; do
+              if git diff --name-only origin/gh-pages -- dev | grep -q .; then
+                git checkout "$REFNAME" dev
+                git commit -qC "$REFNAME"
+              fi
+            done
+          # Add Haddocks
           git add -A --force ./haddocks
           git mv ./haddocks/* .
           git commit -m "Updated from ${GITHUB_SHA} via ${GITHUB_EVENT_NAME}"
