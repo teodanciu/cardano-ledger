@@ -105,14 +105,15 @@ jobs:
     - name: Build
       run: cabal build all
 
+    - name: Check directory size
+      run: du -sh .
+
     # Pass working directory to test jobs
-    - name: Archive working directory
-      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
-    - name: Upload working directory archive
+    - name: Upload working directory
       uses: actions/upload-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
-        path: state.tar
+        path: .
         overwrite: true
         retention-days: 1
 
@@ -221,8 +222,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
-    - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
+        path: .
 
     - uses: actions/cache@v4
       if: matrix.os != 'macos-latest'
