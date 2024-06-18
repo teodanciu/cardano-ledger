@@ -105,8 +105,11 @@ jobs:
     - name: Build
       run: cabal build all
 
+    - name: Check directory size
+      run: du -sh .
+
     # Pass working directory to test jobs
-    - name: Archive working directory
+    - name: Upload working directory
       uses: actions/upload-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
