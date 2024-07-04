@@ -1154,19 +1154,6 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
       <*> toSpecRep ceeeTreasury
       <*> toSpecRep ceeeEpoch
 
-instance
-  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  ) =>
-  SpecTranslate ctx (ConwayDelegEnv era)
-  where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
-
-  toSpecRep ConwayDelegEnv {..} =
-    Agda.MkDelegEnv
-      <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
-
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
 
@@ -1186,7 +1173,4 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
-instance SpecTranslate ctx (ConwayDelegPredFailure era) where
-  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
