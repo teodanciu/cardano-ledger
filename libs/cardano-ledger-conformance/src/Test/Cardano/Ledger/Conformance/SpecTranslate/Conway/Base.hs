@@ -1157,7 +1157,15 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
 
-  toSpecRep (ConwayRegCert _ _) = throwError "RegCert not supported" -- TODO Investigate why!
+  toSpecRep (ConwayRegCert c d) =
+    -- throwError "RegCert not supported" -- TODO Investigate why!
+    -- Agda.Delegate <$> toSpecRep cred <*> pure Nothing <*> pure Nothing <*>  toSpecRep coin
+    Agda.Delegate
+      <$> toSpecRep c
+      <$> toSpecRep cred
+      <*> pure Nothing
+      <*> pure Nothing
+      <*> toSpecRep coin
   toSpecRep (ConwayUnRegCert c _) =
     Agda.Dereg <$> toSpecRep c
   toSpecRep (ConwayDelegCert c d) =
@@ -1172,5 +1180,3 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
       <*> toSpecRep (getVoteDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
-
-

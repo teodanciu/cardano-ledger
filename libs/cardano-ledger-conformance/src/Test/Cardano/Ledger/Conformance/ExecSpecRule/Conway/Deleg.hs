@@ -20,6 +20,8 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Generic.PrettyCore
+import Test.QuickCheck
 
 instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
   environmentSpec _ = delegEnvSpec
@@ -47,3 +49,10 @@ disableRegCertsDelegCert delegCert =
     (branch $ \_ _ -> True)
     (branch $ \_ _ -> True)
     (branch $ \_ _ _ -> True)
+
+-- main :: IO ()
+-- main = do
+--   env <- generate $ genFromSpec $ delegEnvSpec @ConwayFn @"GOVCERT" @Conway ctx
+--   state <- generate $ genFromSpec $ stateSpec @ConwayFn @"GOVCERT" @Conway ctx env
+--   signal <- generate $ genFromSpec $ signalSpec @ConwayFn @"GOVCERT" @Conway ctx env state
+--   putStrLn $ show $ prettyA signal

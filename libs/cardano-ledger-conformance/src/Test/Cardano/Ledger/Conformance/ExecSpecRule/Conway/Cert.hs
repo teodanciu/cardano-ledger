@@ -38,7 +38,7 @@ instance
         (caseOn cert)
           ( branch $ \delegCert ->
               (caseOn delegCert)
-                (branch $ \_ _ -> False) -- TODO DelegRegCert is disabled! Investigate why!
+                (branch $ \_ _ -> True) -- TODO DelegRegCert is disabled! Investigate why!
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ _ -> True)
