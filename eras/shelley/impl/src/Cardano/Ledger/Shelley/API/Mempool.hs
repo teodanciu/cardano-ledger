@@ -61,16 +61,19 @@ import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Except (Except, MonadError, liftEither)
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (..),
-  applySTS,
- )
+import Control.State.Transition.Extended
+
+-- (
+--   Event,
+--   BaseM,
+--   Environment,
+--   PredicateFailure,
+--   STS,
+--   Signal,
+--   State,
+--   TRC (..),
+--   applySTS,
+--  )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -143,6 +146,31 @@ class
           . right (,Validated tx)
           $ res
 
+  applyTxOpts ::
+    -- MonadError (ApplyTxError era) m =>
+    (STS s, m ~ BaseM s) =>
+    Globals ->
+    ApplySTSOpts ep ->
+    MempoolEnv era ->
+    MempoolState era ->
+    Tx era ->
+    m ((MempoolState era, [Event (EraRule "LEDGER" era)]), Validated (Tx era))
+  applyTxOpts globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTSOpts @(EraRule "LEDGER" era) defaultOpts
+            $ TRC (env, state, tx)
+        defaultOpts =
+          ApplySTSOpts
+            { asoAssertions = globalAssertionPolicy
+            , asoValidation = ValidateAll
+            , asoEvents = EPReturn
+            }
+     in liftEither
+          . left ApplyTxError
+          . right (,Validated tx)
+          $ res
+
   -- | Reapply a previously validated 'Tx'.
   --
   --   This applies the (validated) transaction to a new mempool state. It may
@@ -208,6 +236,7 @@ mkMempoolEnv
       , Ledger.ledgerIx = minBound
       , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
       , Ledger.ledgerAccount = LedgerState.esAccountState nesEs
+      , Ledger.ledgerMempool = True
       }
 
 -- | Construct a mempool state from the wider ledger state.
