@@ -61,16 +61,19 @@ import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Except (Except, MonadError, liftEither)
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (..),
-  applySTS,
- )
+import Control.State.Transition.Extended
+
+-- (
+--   Event,
+--   BaseM,
+--   Environment,
+--   PredicateFailure,
+--   STS,
+--   Signal,
+--   State,
+--   TRC (..),
+--   applySTS,
+--  )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -138,6 +141,31 @@ class
           flip runReader globals
             . applySTS @(EraRule "LEDGER" era)
             $ TRC (env, state, tx)
+     in liftEither
+          . left ApplyTxError
+          . right (,Validated tx)
+          $ res
+
+  applyTxOpts ::
+    -- MonadError (ApplyTxError era) m =>
+    (STS s, m ~ BaseM s) =>
+    Globals ->
+    ApplySTSOpts ep ->
+    MempoolEnv era ->
+    MempoolState era ->
+    Tx era ->
+    m ((MempoolState era, [Event (EraRule "LEDGER" era)]), Validated (Tx era))
+  applyTxOpts globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTSOpts @(EraRule "LEDGER" era) defaultOpts
+            $ TRC (env, state, tx)
+        defaultOpts =
+          ApplySTSOpts
+            { asoAssertions = globalAssertionPolicy
+            , asoValidation = ValidateAll
+            , asoEvents = EPReturn
+            }
      in liftEither
           . left ApplyTxError
           . right (,Validated tx)

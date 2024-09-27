@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -22,6 +23,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), applyTx, mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
@@ -29,6 +31,7 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import Debug.Trace
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -49,6 +52,7 @@ spec ::
   , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , STS (EraRule "LEDGERS" era)
+  , ApplyTx era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
@@ -201,3 +205,20 @@ spec = do
           (Seq.singleton tx)
       let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
       mempoolEvents `shouldBeExpr` []
+
+    it "Mempool events should be emitted via applyTxs" $ do
+      globals <- use impGlobalsL
+      slotNo <- use impLastTickG
+      nes <- use impNESL
+      let ls = nes ^. nesEsL . esLStateL
+          pp = nes ^. nesEsL . curPParamsEpochStateL
+          account = nes ^. nesEsL . esAccountStateL
+
+      let mempoolEnv = mkMempoolEnv nes slotNo
+      tx <- fixupTx $ mkBasicTx mkBasicTxBody
+
+      case applyTx globals mempoolEnv ls tx of
+        Left err -> error $ show err
+        Right x -> do
+          let !_ = trace ("\n !!!???????" <> (show x) <> "\n") True
+          pure ()
