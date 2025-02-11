@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   ShelleyTxBody (ShelleyTxBody),
  )
+import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -712,6 +713,15 @@ instance
   Arbitrary (ShelleyTx era)
   where
   arbitrary = genTx
+
+instance
+  ( EraSegWits era
+  , TxSeq era ~ ShelleyTxSeq era
+  , Arbitrary (Tx era)
+  ) =>
+  Arbitrary (ShelleyTxSeq era)
+  where
+  arbitrary = toTxSeq <$> arbitrary
 
 instance
   ( Era era

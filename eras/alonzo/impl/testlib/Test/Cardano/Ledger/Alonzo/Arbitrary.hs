@@ -60,6 +60,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
+import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (AlonzoTxWits),
   Redeemers (Redeemers),
@@ -217,6 +218,15 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance
+  ( EraSegWits era
+  , TxSeq era ~ AlonzoTxSeq era
+  , Arbitrary (Tx era)
+  ) =>
+  Arbitrary (AlonzoTxSeq era)
+  where
+  arbitrary = toTxSeq <$> arbitrary
 
 genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
 genEraLanguage = choose (minBound, eraMaxLanguage @era)

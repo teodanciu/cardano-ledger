@@ -188,7 +188,8 @@ roundTripShareEraTypeExpectation = roundTripShareEraExpectation @era @(t era)
 -- | CBOR RoundTrip spec for all the core types and type families that are parametrized on era.
 roundTripCoreEraTypesSpec ::
   forall era.
-  ( EraTx era
+  ( EraSegWits era
+  , ToCBOR (TxSeq era)
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
   , Arbitrary (TxOut era)
@@ -200,6 +201,7 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (Script era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , Arbitrary (TxSeq era)
   , HasCallStack
   ) =>
   Spec
@@ -216,6 +218,7 @@ roundTripCoreEraTypesSpec = do
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody era)
     roundTripAnnEraSpec @era @(Tx era)
+    roundTripAnnEraSpec @era @(TxSeq era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)

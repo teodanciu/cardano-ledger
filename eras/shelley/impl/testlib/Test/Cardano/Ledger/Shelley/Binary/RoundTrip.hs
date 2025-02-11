@@ -23,13 +23,14 @@ import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 roundTripShelleyCommonSpec ::
   forall era.
-  ( EraTx era
+  ( EraSegWits era
   , EraGov era
   , Eq (StashedAVVMAddresses era)
   , Show (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
   , DecCBOR (StashedAVVMAddresses era)
   , Arbitrary (StashedAVVMAddresses era)
+  , Arbitrary (TxSeq era)
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
   , Arbitrary (TxOut era)
@@ -43,6 +44,7 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , ToCBOR (TxSeq era)
   ) =>
   Spec
 roundTripShelleyCommonSpec = do
