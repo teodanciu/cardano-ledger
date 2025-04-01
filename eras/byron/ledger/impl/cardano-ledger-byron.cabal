@@ -9,7 +9,7 @@ description: The blockchain layer of Cardano during the Byron era
 category: Currency
 build-type: Simple
 data-files:
-  cddl-spec/byron.cddl
+  ../../cddl-spec/byron.cddl
   golden/cbor/block/BlockSignature
   golden/cbor/block/Body
   golden/cbor/block/BoundaryBlockHeader

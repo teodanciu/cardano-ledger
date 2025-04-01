@@ -3,6 +3,7 @@ module Test.Cardano.Chain.Binary.Cddl (
   readByronCddlFiles,
 ) where
 
+import Cardano.Prelude
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_byron
 
